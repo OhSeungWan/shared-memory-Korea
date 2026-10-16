@@ -70,6 +70,7 @@ run('offline-vendor', async ({ browser, base, check, presetContinue }) => {
   await page.waitForFunction(() => /첫 번째 제안|아직 등록된/.test(document.getElementById('sharedList').textContent));
   check('실제 라이브러리로 목록 조회 요청 (public_expressions RPC)', page.__api.some(a => a.method === 'POST' && /\/rpc\/public_expressions$/.test(a.url)));
   await page.fill('#userNarrative', '임진왜란은 일본의 침략으로 시작되어 조선과 명이 함께 맞선 전쟁이었다.');
+  await page.check('#publishConsent');   // 공개 등록은 별도 동의
   await page.click('#submitNarrative');
   await page.waitForFunction(() => /등록되었습니다|실패/.test(document.getElementById('submitStatus').textContent));
   check('실제 라이브러리로 등록 성공 (가짜 응답)', /등록되었습니다/.test(await page.$eval('#submitStatus', el => el.textContent)));
@@ -91,6 +92,7 @@ run('offline-vendor', async ({ browser, base, check, presetContinue }) => {
   const listMsg = await page.$eval('#sharedList', el => el.textContent);
   check('목록 실패 시 네트워크 안내 표시', /네트워크에 연결할 수 없습니다/.test(listMsg), listMsg);
   await page.fill('#userNarrative', '네트워크가 끊긴 상태에서 쓴 문장입니다.');
+  await page.check('#publishConsent');
   await page.click('#submitNarrative');
   await page.waitForFunction(() => /실패/.test(document.getElementById('submitStatus').textContent));
   const saveMsg = await page.$eval('#submitStatus', el => el.textContent);

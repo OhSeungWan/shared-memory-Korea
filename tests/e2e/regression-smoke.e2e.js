@@ -12,6 +12,7 @@ async function submit(page, text, lang) {
     if (!on) await page.click(`[data-writing-lang="${lang}"]`);
   }
   await page.fill('#userNarrative', text);
+  await page.check('#publishConsent');   // 공개 등록은 별도 동의
   await page.click('#submitNarrative');
   await page.waitForFunction(() => /등록되었습니다|실패|빈칸|역사 용어/.test(document.getElementById('submitStatus').textContent));
   return page.$eval('#submitStatus', el => el.textContent);
@@ -72,6 +73,7 @@ run('regression-smoke', async ({ browser, base, check, mockPage, presetContinue 
       if (!on) await page.click(`[data-writing-lang="${lang}"]`);
     }
     await page.fill('#userNarrative', t);
+    await page.check('#publishConsent');
     await page.click('#submitNarrative');
     if (await page.isVisible('#participantGate').catch(() => false)) await page.click('[data-gate-choice="continue"]');
     await page.waitForFunction(() => /등록되었습니다|실패/.test(document.getElementById('submitStatus').textContent));

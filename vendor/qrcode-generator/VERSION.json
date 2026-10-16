@@ -1,0 +1,12 @@
+{
+  "package": "qrcode-generator",
+  "version": "2.0.4",
+  "license": "MIT",
+  "author": "Kazuhiko Arase",
+  "source": "https://registry.npmjs.org/qrcode-generator/-/qrcode-generator-2.0.4.tgz",
+  "sourceFile": "package/dist/qrcode.js",
+  "npmIntegrity": "sha512-mZSiP6RnbHl4xL2Ap5HfkjLnmxfKcPWpWe/c+5XxCuetEenqmNFf1FH/ftXPCtFG5/TDobjsjz6sSNL0Sr8Z9g==",
+  "fileSha256": "79ec86f82856005b1c887905cfccfcfbec3821ca61c7fd5a952faa5f778f791c",
+  "updated": "2026-10-16",
+  "note": "공식 npm 패키지의 dist/qrcode.js를 수정 없이 복사했습니다. 수업·전시용 QR 시트(사건별 링크)를 만드는 데만 쓰며, 네트워크·저장소에 접근하지 않습니다."
+}
