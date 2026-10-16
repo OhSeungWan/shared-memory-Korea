@@ -340,9 +340,11 @@ GitHub Pages: 저장소 Settings → Pages → Branch `main` / root 로 배포.
 ```bash
 npm test          # = node --test tests/*.test.js  (Node 18 이상)
 
-# 브라우저 E2E (Playwright 필요, 실제 DB 접속 없음 — npm test에는 포함되지 않음)
-node tests/e2e/offline-vendor.e2e.js    # 외부 CDN 차단 상태에서 라이브러리 로드·조회·등록·네트워크 장애 안내
-node tests/e2e/regression-smoke.e2e.js  # 주요 기능 회귀 확인 (가짜 Supabase)
+# 브라우저 E2E (Playwright + Chromium 필요, 실제 DB 접속 없음 — npm test에는 포함되지 않음)
+npm run test:e2e  # tests/e2e/*.e2e.js 전체 실행 후 요약
+# 종료 코드: 0 = 브라우저에서 실제로 실행되어 통과 / 1 = 실패(확인 항목 0개 포함) / 2 = 실행하지 못함(SKIPPED)
+# 각 결과에 Playwright·Chromium 버전과 실행 시각이 출력됩니다. Playwright가 없으면 SKIPPED이며 통과가 아닙니다.
+# 설치: npm i -D playwright && npx playwright install --with-deps chromium  (또는 PLAYWRIGHT_MODULE, CHROMIUM_PATH 지정)
 ```
 
 - `tests/nlp-analyzer.test.js` — 국가별 서술 분석 (기존)
