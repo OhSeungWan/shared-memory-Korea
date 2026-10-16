@@ -487,6 +487,20 @@
 
   </main>
 
+  <!-- 누가 참여하나요? — 이 기기에 이전 참여 기록이 있을 때 참여 시작 전에 한 번 묻습니다 (script.js ensureParticipantChoice) -->
+  <div class="participant-gate" id="participantGate" role="dialog" aria-modal="true" aria-labelledby="participantGateTitle" aria-describedby="participantGateDesc" hidden>
+    <div class="participant-gate__card">
+      <h2 class="participant-gate__title" id="participantGateTitle">이 기기에 이전 참여 기록이 있습니다</h2>
+      <p class="participant-gate__desc" id="participantGateDesc">방금까지 이 기기로 참여하던 학생인가요?<br />다른 학생이라면 새 참여자로 시작해 주세요.</p>
+      <div class="participant-gate__actions">
+        <button type="button" class="btn btn--primary" data-gate-choice="new">다른 학생입니다 · 새 참여자로 시작</button>
+        <button type="button" class="btn btn--small participant-gate__continue" data-gate-choice="continue">같은 학생입니다 · 이어서 참여하기</button>
+      </div>
+      <p class="participant-gate__note">새 참여자로 시작하면 이 기기에 남은 이전 참여자의 연령대·탐구 전 문장·진행 기록을 지웁니다. 이미 등록된 제안은 그대로 남습니다.</p>
+      <p class="participant-gate__note" data-gate-submit-note hidden>지금 작성 중인 문장과 이유는 그대로 두고, 참여자 정보만 바꿉니다.</p>
+    </div>
+  </div>
+
   <!-- 자바스크립트 파일 로드 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./supabase-config.js"></script>

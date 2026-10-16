@@ -1,14 +1,20 @@
 /* 브라우저 E2E 테스트용 가짜 Supabase 클라이언트 (실제 DB에 접속하지 않음)
    · e2e 스크립트가 supabase-js 요청을 이 파일로 바꿔 끼웁니다.
-   · 데이터는 sessionStorage('__mock_db')에 보관해 새로고침 후에도 유지됩니다. (사이트의 'sm_' 키와 겹치지 않음) */
+   · 데이터는 sessionStorage('__mock_db')에 보관해 새로고침 후에도 유지됩니다. (사이트의 'sm_' 키와 겹치지 않음)
+     sessionStorage를 쓸 수 없으면 이 페이지의 메모리에만 보관합니다. */
 (function () {
   'use strict';
   const KEY = '__mock_db';
+  let memory = null;                      // sessionStorage를 쓸 수 없는 환경(테스트)용
+  const empty = () => ({ shared_expressions: [], expression_participants: [], expression_empathy: [], nextId: 100 });
   function load() {
-    try { return JSON.parse(sessionStorage.getItem(KEY)) || { shared_expressions: [], expression_participants: [], expression_empathy: [], nextId: 100 }; }
-    catch (e) { return { shared_expressions: [], expression_participants: [], expression_empathy: [], nextId: 100 }; }
+    try { const v = sessionStorage.getItem(KEY); if (v) return JSON.parse(v); } catch (e) { /* 메모리 사용 */ }
+    return memory ? JSON.parse(JSON.stringify(memory)) : empty();
   }
-  function save(db) { try { sessionStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { /* 무시 */ } }
+  function save(db) {
+    memory = JSON.parse(JSON.stringify(db));
+    try { sessionStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { /* 메모리에만 */ }
+  }
   window.__mockDb = { read: load, failInsert: false, calls: [] };
 
   function insert(table, rows) {

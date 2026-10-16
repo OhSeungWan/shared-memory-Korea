@@ -86,6 +86,8 @@ function renderEventCards() {
 function openEventDetail(eventId) {
   const event = eventsData.find(e => e.id === eventId);
   if (!event) return;
+  // 이전 참여 기록이 있는데 이 창에서 아직 "누가 참여하는지" 고르지 않았다면 먼저 묻습니다.
+  if (!ensureParticipantChoice(() => openEventDetail(eventId), 'event')) return;
 
   currentEventId = eventId;
 
@@ -1667,6 +1669,10 @@ async function submitSharedNarrative() {
     return;
   }
 
+  // 안전장치: 누가 참여하는지 고르지 않은 채로 이전 참여자의 정보가 새 제출에 섞이지 않게 합니다.
+  // (등록 버튼을 잠그기 전에 확인해야, 선택 창을 닫아도 버튼이 "등록 중..."에 멈추지 않습니다)
+  if (!ensureParticipantChoice(() => submitSharedNarrative(), 'submit')) return;
+
   const submitButton = document.getElementById('submitNarrative');
   if (submitButton) {
     if (submitButton.disabled) return;
@@ -1724,6 +1730,8 @@ async function submitSharedNarrative() {
   guideState.reasons = new Set();
   // 제출에 성공했을 때만 탐구 전 문장을 이 기기에서 지웁니다 (실패하면 그대로 남아 다시 등록할 수 있음).
   clearBeforeAfterSubmit(eventIdAtSubmit);
+  // 다음 사람이 같은 창에서 "참여하기"를 눌러도 이어받지 않도록, 다음 참여 시작 때 다시 묻습니다.
+  setParticipantChoice(null);
   if (eventIdAtSubmit === currentEventId) { beforeEditing = false; renderBeforeCard(); }
   renderNewcomerNotes();
 
@@ -2668,6 +2676,7 @@ function gotoEvents(mode) {
 
 /* "참여하기": 연령대를 아직 고르지 않았다면 첫 화면의 참여 시작 영역을 먼저 엽니다. */
 function startExploration() {
+  if (!ensureParticipantChoice(() => startExploration(), 'start')) return;
   const picker = document.getElementById('agePicker');
   const button = document.getElementById('startButton');
   // 이미 연령대를 골랐거나(응답하지 않음 포함) 선택 UI를 쓸 수 없으면 바로 역사 선택으로 갑니다.
@@ -2737,16 +2746,21 @@ function draftInProgress() {
   return items;
 }
 
-function resetParticipantUiState() {
-  // 입력창·작성 가이드
-  ['userName', 'userNarrative', 'userReason', 'beforeInput'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  document.querySelectorAll('[data-guide-reason]').forEach(cb => { cb.checked = false; });
-  guideState.reasons = new Set();
-  writingLangChoice = null;
-  templateUsed = false;
+function resetParticipantUiState(options) {
+  const keepDraft = !!(options && options.keepDraft);   // 제출 직전 전환: 지금 사람이 쓰던 문장은 남김
+  if (!keepDraft) {
+    // 입력창·작성 가이드
+    ['userName', 'userNarrative', 'userReason'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    document.querySelectorAll('[data-guide-reason]').forEach(cb => { cb.checked = false; });
+    guideState.reasons = new Set();
+    writingLangChoice = null;
+    templateUsed = false;
+  }
+  const beforeInput = document.getElementById('beforeInput');
+  if (beforeInput) beforeInput.value = '';
   termCheckConfirmedFor = null;
   beforeEditing = false;
   beforeSkipConfirm = false;
@@ -2762,7 +2776,7 @@ function resetParticipantUiState() {
   // 열려 있던 사건 화면도 지워진 상태로 다시 그립니다.
   const event = currentEvent();
   if (event) {
-    resetGuide(event);
+    if (!keepDraft) resetGuide(event);
     loadFlow();
     renderBeforeCard();
     renderFlowProgress();
@@ -2772,16 +2786,18 @@ function resetParticipantUiState() {
 }
 
 function startAsNewParticipant() {
-  if (!Store) return;
+  if (!Store) return false;
   const pending = draftInProgress();
   if (pending.length) {
     let ok = false;
     try {
       ok = window.confirm(`${pending.join(', ')}이(가) 있습니다.\n새 참여자로 시작하면 이 기기에서 지워지며 되돌릴 수 없습니다.\n(이미 등록된 제안은 그대로 남습니다)\n\n계속할까요?`);
     } catch (e) { ok = false; }
-    if (!ok) return;
+    if (!ok) return false;
   }
   Store.resetParticipant();
+  setParticipantChoice('new');
+  closeParticipantGate();
   resetParticipantUiState();
   renderNewcomerNotes();
   const status = document.getElementById('newParticipantStatus');
@@ -2791,6 +2807,113 @@ function startAsNewParticipant() {
   }
   navigateTo('home');
   startExploration();   // 연령대가 지워졌으므로 연령대 선택부터 다시 시작합니다.
+  return true;
+}
+
+/* ------------------------------------------------------------
+   누가 참여하나요? — 이어서 참여 / 새 참여자 선택
+   · 이 기기에 이전 참여 기록이 있으면, 참여를 시작하는 동작(참여하기·사건 열기·제출) 전에 한 번 묻습니다.
+   · 선택은 이 창(탭)에만 기억합니다(sessionStorage). 새로고침해도 유지되고, 창을 새로 열면 다시 묻습니다.
+   · 제출에 성공한 뒤, 또는 15분 동안 아무 조작이 없으면 다음 참여 시작 때 다시 묻습니다.
+   ------------------------------------------------------------ */
+
+const SESSION_CHOICE_KEY = 'sm_session_choice';
+const PARTICIPANT_IDLE_MS = 15 * 60 * 1000;
+let sessionChoiceMemory = null;          // sessionStorage를 쓸 수 없을 때
+let gatePendingAction = null;
+let gateContext = null;
+
+function readParticipantSession() {
+  try {
+    const v = window.sessionStorage.getItem(SESSION_CHOICE_KEY);
+    if (v) return JSON.parse(v);
+  } catch (e) { /* 사용 불가: 메모리 값 */ }
+  return sessionChoiceMemory;
+}
+
+function writeParticipantSession(value) {
+  sessionChoiceMemory = value;
+  try { window.sessionStorage.setItem(SESSION_CHOICE_KEY, JSON.stringify(value)); } catch (e) { /* 메모리에만 */ }
+}
+
+function setParticipantChoice(choice) {
+  writeParticipantSession({ choice: choice || null, at: Date.now() });
+}
+
+let lastSessionTouch = 0;
+function touchParticipantSession() {
+  const now = Date.now();
+  if (now - lastSessionTouch < 30000) return;
+  lastSessionTouch = now;
+  const s = readParticipantSession();
+  if (s && s.choice && now - (s.at || 0) <= PARTICIPANT_IDLE_MS) writeParticipantSession({ choice: s.choice, at: now });
+}
+
+function needsParticipantChoice(context) {
+  if (!Store || !Store.hasParticipantState()) return false;
+  const s = readParticipantSession();
+  if (!s || !s.choice) return true;
+  // 제출 직전에는 시간 기준을 적용하지 않습니다 (글을 쓰는 동안 시간이 지났을 수 있으므로).
+  if (context !== 'submit' && Date.now() - (s.at || 0) > PARTICIPANT_IDLE_MS) return true;
+  return false;
+}
+
+/** 진행해도 되면 true. 먼저 물어야 하면 선택 창을 띄우고 false (선택 후 action을 이어서 실행). */
+function ensureParticipantChoice(action, context) {
+  if (!Store) return true;
+  if (!Store.hasParticipantState()) {
+    // 이 기기에 남은 기록이 없음 = 처음 참여하는 사람
+    const s = readParticipantSession();
+    if (!s || !s.choice) setParticipantChoice('new');
+    return true;
+  }
+  if (!needsParticipantChoice(context)) return true;
+  openParticipantGate(action, context);
+  return false;
+}
+
+function openParticipantGate(action, context) {
+  const gate = document.getElementById('participantGate');
+  if (!gate) { setParticipantChoice('continue'); if (action) action(); return; }
+  gatePendingAction = action || null;
+  gateContext = context || null;
+  const submitNote = gate.querySelector('[data-gate-submit-note]');
+  if (submitNote) submitNote.hidden = context !== 'submit';
+  gate.hidden = false;
+  document.body.classList.add('has-participant-gate');
+  setTimeout(() => gate.querySelector('[data-gate-choice="new"]')?.focus(), 30);
+}
+
+function closeParticipantGate() {
+  const gate = document.getElementById('participantGate');
+  if (gate) gate.hidden = true;
+  document.body.classList.remove('has-participant-gate');
+  gatePendingAction = null;
+  gateContext = null;
+}
+
+function handleGateChoice(choice) {
+  const action = gatePendingAction;
+  const context = gateContext;
+  if (choice === 'continue') {
+    setParticipantChoice('continue');
+    closeParticipantGate();
+    if (action) action();
+    return;
+  }
+  if (choice !== 'new') return;
+  if (context === 'submit') {
+    // 제출 직전 전환: 지금 쓰던 문장·이유는 남기고, 이 기기에 남아 있던 이전 참여자 정보만 지웁니다.
+    Store.resetParticipant();
+    setParticipantChoice('new');
+    closeParticipantGate();
+    resetParticipantUiState({ keepDraft: true });
+    renderNewcomerNotes();
+    setSubmitStatus('새 참여자로 바꿨습니다. 이전 참여자의 정보는 지웠고, 작성 중인 문장은 그대로 두었습니다. 연령대(선택)를 확인한 뒤 ‘제안 등록하기’를 다시 눌러 주세요.', 'info');
+    document.getElementById('formAgeLabel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  startAsNewParticipant();    // 작성 중인 내용이 있으면 확인 창을 띄우고, 취소하면 선택 창이 그대로 남습니다.
 }
 
 /** 이 기기에 이전 참여 기록이 있을 때만 "새 참여자로 시작" 안내를 보여줍니다 (처음 온 사람에게는 숨김). */
@@ -2814,6 +2937,22 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('startButton')?.addEventListener('click', startExploration);
   document.addEventListener('click', e => {
     if (e.target.closest('[data-new-participant]')) startAsNewParticipant();
+    const gateChoice = e.target.closest('[data-gate-choice]');
+    if (gateChoice) handleGateChoice(gateChoice.dataset.gateChoice);
+  });
+  // 조작이 있으면 "같은 사람이 계속 쓰는 중"으로 봅니다 (15분 동안 조작이 없으면 다음 참여 시작 때 다시 물음)
+  ['pointerdown', 'keydown', 'scroll', 'touchstart'].forEach(type =>
+    document.addEventListener(type, touchParticipantSession, { passive: true, capture: true }));
+  document.addEventListener('keydown', e => {
+    const gate = document.getElementById('participantGate');
+    if (!gate || gate.hidden) return;
+    if (e.key === 'Escape') { closeParticipantGate(); return; }     // 닫기만 하고 아무것도 바꾸지 않음
+    if (e.key !== 'Tab') return;
+    const buttons = [...gate.querySelectorAll('button')];
+    const i = buttons.indexOf(document.activeElement);
+    const next = e.shiftKey ? (i <= 0 ? buttons.length - 1 : i - 1) : (i + 1) % buttons.length;
+    e.preventDefault();
+    buttons[next].focus();
   });
   document.addEventListener('click', e => {
     const age = e.target.closest('[data-age-value]');
