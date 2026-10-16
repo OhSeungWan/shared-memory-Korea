@@ -114,6 +114,7 @@
 
 - HTML · CSS · JavaScript (빌드 도구·프레임워크 없음, 정적 파일만으로 동작)
 - [Supabase](https://supabase.com) (PostgreSQL + REST, 공개 publishable 키 + RLS)
+- Supabase JS **2.117.2** — 외부 CDN 대신 `vendor/supabase-js/`에 보관 (학교망에서 CDN이 막혀도 동작)
 - Google Fonts (Noto Serif KR, Noto Sans KR, Cormorant Garamond)
 - 자체 구현 NLP (외부 AI API·학습된 언어 모델 **사용하지 않음**)
 - 시각화: 외부 그래프 라이브러리 없이 SVG 직접 생성 (`memory-map.js`) — 원 몇 개와 선만 필요해 D3 등 수백 KB 의존성을 추가할 이유가 없고, GitHub Pages에서 그대로 동작하기 때문입니다.
@@ -304,7 +305,8 @@
 ```
 index.html                  페이지 구조 (SPA: section 전환)
 style.css                   디자인 (한지 베이지·먹색·국가별 포인트 컬러)
-supabase-config.js          Supabase 공개 클라이언트 (CDN 실패 시 null)
+supabase-config.js          Supabase 공개 클라이언트 (라이브러리를 못 불러오면 null)
+vendor/supabase-js/         Supabase JS 2.117.2 (저장소 내 보관 · 버전 고정 · MIT 라이선스 · VERSION.json에 무결성 해시)
 events-data.js              사건·국가별 서술·키워드 묶음·참고 예시
 sources-data.js             관련 사료·자료 메타데이터
 concept-lexicon.js          다국어 개념 사전·표현 프레임
@@ -317,6 +319,27 @@ shared-store.js             Supabase 읽기·쓰기 (하위 호환)
 script.js                   화면 렌더링·이벤트 처리
 supabase/*.sql              DB 확장 SQL
 tests/*.test.js             Node 테스트
+```
+
+### 외부 라이브러리 (Supabase JS)
+
+학교망에서 외부 CDN(jsDelivr 등)이 막히거나 느려도 동작하도록, Supabase JS를 **저장소 안에 보관**하고 **정확한 버전(2.117.2)으로 고정**했습니다. 페이지가 불러오는 외부 스크립트는 없습니다(글꼴만 Google Fonts, 실패해도 기본 글꼴로 표시).
+
+| 파일 | 내용 |
+|---|---|
+| `vendor/supabase-js/supabase.js` | 공식 npm 패키지 `@supabase/supabase-js@2.117.2`의 `dist/umd/supabase.js`를 수정 없이 복사 |
+| `vendor/supabase-js/LICENSE` | MIT 라이선스 원문 (Copyright Supabase) |
+| `vendor/supabase-js/VERSION.json` | 버전, 배포일, npm 무결성(`sha512`), 파일 해시(`sha256`). `tests/vendor-supabase.test.js`가 파일 해시를 검사해 변조·잘못된 교체를 막습니다 |
+
+**업데이트 방법** (2주 이상 지난 2.x 버전 권장):
+
+```bash
+npm pack @supabase/supabase-js@<버전>            # 공식 레지스트리에서 받기 (출력의 integrity 확인)
+tar xzf supabase-supabase-js-<버전>.tgz
+cp package/dist/umd/supabase.js vendor/supabase-js/supabase.js
+cp package/LICENSE vendor/supabase-js/LICENSE
+sha256sum vendor/supabase-js/supabase.js          # → VERSION.json의 fileSha256, version, npmIntegrity 갱신
+npm test && node tests/e2e/offline-vendor.e2e.js
 ```
 
 ## 11. 실행 방법
@@ -348,6 +371,7 @@ npm run test:e2e  # tests/e2e/*.e2e.js 전체 실행 후 요약
 - `tests/shared-device.test.js` — 새 참여자로 시작(‘sm_’ 키만 삭제, 새 참여자 키), 새로고침 후 분리 유지, localStorage 차단·없음·용량 초과 환경, 초기화 후 제출이 새 키로 연결되고 삭제 요청이 없음
 - `tests/prefinal-stabilization.test.js` — 사건 순서(imjin→zainichi)·문장 틀 빈칸 잔존 검출·역사 용어 확인·닉네임 확인·사료 검증 단계와 메타데이터·`sourceRefs` 유효성·편집자 해설 일반화 방지·허용 event_key·정상 insert 컬럼 = 허용 컬럼·RPC 권한/`search_path`·집계 RPC 형식·소표본 보호(서버 기준 = 화면 기준)·RPC/테이블 하위 호환·기존 언어/연령 데이터 호환
 - `tests/shared-memory-analyzer.test.js` — 빈 배열·한 개·거의 같은 표현·완전히 다른 표현·한/일/영 혼합·잘못된 입력·유사도 범위·군집 결과·결정성·대량 데이터·서술 연결·프레이밍·탐구 전/후·실시간 분석·키워드 차트 자동 계산·강조점·작성 후보·공감 비교·사료 데이터 검증·지도 배치
+- `tests/vendor-supabase.test.js` — vendor 파일 버전 고정·해시·라이선스, index.html에 외부 CDN 스크립트 없음, 비밀 키 없음, 실제 vendor 라이브러리 + shared-store로 조회·등록·공감·집계 RPC 요청 형식(가짜 HTTP), 네트워크 실패 시 안내 문구
 
 ## 13. 향후 발전 방향
 

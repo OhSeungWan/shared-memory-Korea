@@ -1,0 +1,12 @@
+{
+  "package": "@supabase/supabase-js",
+  "version": "2.117.2",
+  "published": "2026-09-25",
+  "license": "MIT",
+  "source": "https://registry.npmjs.org/@supabase/supabase-js/-/supabase-js-2.117.2.tgz",
+  "sourceFile": "package/dist/umd/supabase.js",
+  "npmIntegrity": "sha512-eSG2VKnHR+Clp1PmidZ1/weJ8PJwoybjva3L2GgKqFG4YDS1Iqmc61psKGZP5xw6OMT2O7ZorPR42PY6q1BOXg==",
+  "fileSha256": "59d39487c3589843b410322d8a3d562ce022aba1e5ccb16898ef3fb2a0da2ecd",
+  "updated": "2026-10-16",
+  "note": "공식 npm 패키지의 UMD 빌드를 수정 없이 복사했습니다. 업데이트 방법은 README '외부 라이브러리' 절을 참고하세요."
+}

@@ -6,7 +6,8 @@ const SUPABASE_URL =
 const SUPABASE_PUBLISHABLE_KEY =
   "sb_publishable_eHYYDHSkRHyE7dGkMyVX7Q_FADlbe5C";
 
-// CDN이 막혀 supabase-js를 불러오지 못해도 페이지의 나머지 기능은 동작하도록 null로 둡니다.
+// supabase-js는 vendor/supabase-js/supabase.js(저장소 내 보관, 버전 고정)에서 불러옵니다.
+// 그래도 불러오지 못한 경우에는 페이지의 나머지 기능이 동작하도록 null로 둡니다.
 const db = (window.supabase && typeof window.supabase.createClient === 'function')
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
   : null;
