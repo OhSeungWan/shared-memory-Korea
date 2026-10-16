@@ -2392,3 +2392,40 @@ details.ai-result__section[open] > summary { margin-bottom: 0.75rem; }
   .glance { padding: 1.1rem 1rem; }
   .glance__cols, .source-flow { grid-template-columns: 1fr; }
 }
+
+
+/* ---------- 20. 공용 기기 — 새 참여자로 시작 (기존 링크 스타일 재사용) ---------- */
+.newcomer-note { font-size: 0.84rem; color: var(--ink-mute); margin-top: 0.6rem; }
+.newcomer-note--center { text-align: center; margin-top: 0.8rem; }
+.newcomer-status {
+  font-size: 0.84rem; color: var(--ink-soft); margin-top: 0.6rem;
+  background: var(--bg-soft); border-left: 3px solid var(--accent); border-radius: var(--radius);
+  padding: 0.5rem 0.8rem;
+}
+.flow-progress__newcomer { font-size: 0.78rem; color: var(--ink-mute); margin-top: 0.3rem; }
+
+/* 누가 참여하나요? (이어서 참여 / 새 참여자) — 기존 카드·버튼 토큰 사용 */
+.participant-gate {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem; background: rgba(26, 26, 26, 0.35);
+}
+.participant-gate[hidden] { display: none; }
+.participant-gate__card {
+  background: var(--bg-card); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+  border-radius: var(--radius); box-shadow: var(--shadow-lg);
+  max-width: 460px; width: 100%; padding: 1.6rem 1.6rem 1.3rem;
+  word-break: keep-all;               /* 한국어 단어 중간 줄바꿈 방지 */
+}
+@media (max-width: 640px) {
+  .participant-gate__card { padding: 1.3rem 1.2rem 1.1rem; }
+  .participant-gate__actions .btn { padding: 0.85rem 1rem; }
+}
+.participant-gate__title { font-family: 'Noto Serif KR', serif; font-size: 1.15rem; margin-bottom: 0.5rem; }
+.participant-gate__desc { font-size: 0.92rem; color: var(--ink-soft); line-height: 1.7; margin-bottom: 1.1rem; }
+.participant-gate__actions { display: flex; flex-direction: column; gap: 0.6rem; }
+.participant-gate__actions .btn { width: 100%; justify-content: center; animation: none; }   /* 첫 화면 등장 효과(slideUp) 제외: 바로 보여야 함 */
+.participant-gate__actions .participant-gate__continue { background: var(--bg-soft); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); padding: 0.85rem 1.1rem; }
+.participant-gate__actions .participant-gate__continue:hover { background: var(--accent-soft); }
+.participant-gate__note { font-size: 0.78rem; color: var(--ink-mute); margin-top: 0.8rem; line-height: 1.6; }
+body.has-participant-gate { overflow: hidden; }

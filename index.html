@@ -114,6 +114,13 @@
           <!-- 실제 Supabase 집계 기반 참여자 수 (집계 함수가 없거나 0명이면 숨김) -->
           <p class="hero__count" id="participantCount" hidden aria-live="polite"></p>
 
+          <!-- 공용 기기: 이 브라우저에 이전 참여 기록이 있을 때만 표시 (script.js renderNewcomerNotes) -->
+          <p class="newcomer-note" data-newcomer-note hidden>
+            이 기기에 이전 참여 기록이 있습니다. 다른 학생이라면
+            <button type="button" class="before-card__link" data-new-participant>새 참여자로 시작</button>
+          </p>
+          <p class="newcomer-status" id="newParticipantStatus" role="status" aria-live="polite" hidden></p>
+
           <!-- 참여 시작 영역: 연령대 선택 → 다음(역사 선택) -->
           <div class="age-picker" id="agePicker" role="region" aria-labelledby="agePickerTitle" hidden>
             <h2 class="age-picker__title" id="agePickerTitle">Shared Memory 참여하기</h2>
@@ -166,6 +173,10 @@
         <p class="page__eyebrow" id="eventsEyebrow">STEP 02</p>
         <h2 class="page__title" id="eventsTitle">어떤 역사에 대한 생각을 남겨볼까요?</h2>
         <p class="page__desc" id="eventsDesc">하나를 선택해주세요.<br />세 나라의 표현을 살펴본 뒤 당신의 생각을 한 문장으로 남길 수 있습니다.</p>
+        <p class="newcomer-note newcomer-note--center" data-newcomer-note hidden>
+          앞사람이 쓰던 기기인가요?
+          <button type="button" class="before-card__link" data-new-participant>새 참여자로 시작</button>
+        </p>
       </div>
 
       <!-- 사건 카드 컨테이너: script.js에서 자바스크립트로 동적 생성 -->
@@ -371,6 +382,7 @@
               <p class="shared-form__status" id="submitStatus" role="status" aria-live="polite"></p>
               <div class="shared-form__next" id="submitNext" hidden>
                 <button type="button" class="btn btn--small" data-goto-tab="memory">다른 사람들의 공동 기억 확인하기 →</button>
+                <p class="newcomer-note">다음 학생이 이 기기를 쓰나요? <button type="button" class="before-card__link" data-new-participant>새 참여자로 시작</button></p>
               </div>
             </div>
 
@@ -474,6 +486,20 @@
     </section>
 
   </main>
+
+  <!-- 누가 참여하나요? — 이 기기에 이전 참여 기록이 있을 때 참여 시작 전에 한 번 묻습니다 (script.js ensureParticipantChoice) -->
+  <div class="participant-gate" id="participantGate" role="dialog" aria-modal="true" aria-labelledby="participantGateTitle" aria-describedby="participantGateDesc" hidden>
+    <div class="participant-gate__card">
+      <h2 class="participant-gate__title" id="participantGateTitle">이 기기에 이전 참여 기록이 있습니다</h2>
+      <p class="participant-gate__desc" id="participantGateDesc">방금까지 이 기기로 참여하던 학생인가요?<br />다른 학생이라면 새 참여자로 시작해 주세요.</p>
+      <div class="participant-gate__actions">
+        <button type="button" class="btn btn--primary" data-gate-choice="new">다른 학생입니다 · 새 참여자로 시작</button>
+        <button type="button" class="btn btn--small participant-gate__continue" data-gate-choice="continue">같은 학생입니다 · 이어서 참여하기</button>
+      </div>
+      <p class="participant-gate__note">새 참여자로 시작하면 이 기기에 남은 이전 참여자의 연령대·탐구 전 문장·진행 기록을 지웁니다. 이미 등록된 제안은 그대로 남습니다.</p>
+      <p class="participant-gate__note" data-gate-submit-note hidden>지금 작성 중인 문장과 이유는 그대로 두고, 참여자 정보만 바꿉니다.</p>
+    </div>
+  </div>
 
   <!-- 자바스크립트 파일 로드 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
