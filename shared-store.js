@@ -187,11 +187,68 @@
 
   /* ---------- 공감 ---------- */
 
+  /* ---------- 브라우저 저장소 (참여자별 임시 상태) ----------
+     · Shared Memory가 쓰는 키는 모두 STORAGE_PREFIX('sm_')로 시작합니다.
+       (GitHub Pages는 같은 계정의 다른 사이트와 저장소를 공유하므로, 초기화는 이 접두어 키만 지웁니다)
+     · localStorage를 쓸 수 없으면(사생활 보호 모드·차단 등) 이 페이지가 열려 있는 동안만 메모리에 보관합니다. */
+
+  const STORAGE_PREFIX = 'sm_';
+  const memoryStore = {};
+
+  function localStore() {
+    try { return root.localStorage || null; } catch (e) { return null; }
+  }
+
   function storageGet(key) {
-    try { return root.localStorage ? root.localStorage.getItem(key) : null; } catch (e) { return null; }
+    let value = null;
+    try { const ls = localStore(); value = ls ? ls.getItem(key) : null; } catch (e) { value = null; }
+    if (value != null) return value;
+    return Object.prototype.hasOwnProperty.call(memoryStore, key) ? memoryStore[key] : null;
   }
   function storageSet(key, value) {
-    try { if (root.localStorage) root.localStorage.setItem(key, value); } catch (e) { /* 저장소 사용 불가: 무시 */ }
+    const str = String(value);
+    try {
+      const ls = localStore();
+      if (!ls) throw new Error('no localStorage');
+      ls.setItem(key, str);
+      delete memoryStore[key];
+    } catch (e) {
+      memoryStore[key] = str;     // 저장소 사용 불가: 이 페이지에서만 유지
+    }
+  }
+  function storageRemove(key) {
+    delete memoryStore[key];
+    try { const ls = localStore(); if (ls) ls.removeItem(key); } catch (e) { /* 무시 */ }
+  }
+
+  /** 이 기기(브라우저)에 남아 있는 Shared Memory 참여자 상태 키 목록 */
+  function participantStorageKeys() {
+    const keys = Object.keys(memoryStore).filter(k => k.indexOf(STORAGE_PREFIX) === 0);
+    try {
+      const ls = localStore();
+      if (ls) {
+        for (let i = 0; i < ls.length; i++) {
+          const k = ls.key(i);
+          if (k && k.indexOf(STORAGE_PREFIX) === 0 && keys.indexOf(k) < 0) keys.push(k);
+        }
+      }
+    } catch (e) { /* 저장소 사용 불가: 메모리 키만 */ }
+    return keys;
+  }
+
+  function hasParticipantState() {
+    return participantStorageKeys().length > 0;
+  }
+
+  /**
+   * 새 참여자로 시작: 이 기기에 남은 이전 참여자의 상태(연령대·탐구 전 문장·학습 경험·진행 기록·
+   * 참여자 키·공감 키·공감 기록)를 지웁니다. 'sm_' 키만 지우며, 다른 사이트의 저장소와
+   * 데이터베이스에 이미 등록된 제안은 건드리지 않습니다. → { removed }
+   */
+  function resetParticipant() {
+    const keys = participantStorageKeys();
+    keys.forEach(storageRemove);
+    return { removed: keys.length };
   }
 
   function randomKey(prefix) {
@@ -200,13 +257,11 @@
       : prefix + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
   }
 
-  const memoryKeys = {};
   /** 브라우저 저장소에 보관하는 무작위 키 (개인정보 아님). 저장소를 쓸 수 없으면 이 페이지에서만 유지합니다. */
   function persistentKey(name, prefix) {
     let key = storageGet(name);
     if (!key) {
-      key = memoryKeys[name] || randomKey(prefix);
-      memoryKeys[name] = key;
+      key = randomKey(prefix);
       storageSet(name, key);
     }
     return key;
@@ -316,6 +371,13 @@
     empathizedSet,
     storageGet,
     storageSet,
+    storageRemove,
+    STORAGE_PREFIX,
+    participantStorageKeys,
+    hasParticipantState,
+    resetParticipant,
+    participantKey,
+    voterKey,
     mapRow,
     normalizeLang,
     LANG_CODES,

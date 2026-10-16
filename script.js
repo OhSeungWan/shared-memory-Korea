@@ -291,7 +291,7 @@ function markFlow(patch) {
 function flowStepDone(id) {
   if (!flow) return false;
   if (id === 'select') return true;
-  if (id === 'before') return !!getBefore() || isBeforeSkipped() || !!getPriorLearning();
+  if (id === 'before') return !!getBefore() || isBeforeSkipped() || isBeforeSubmitted() || !!getPriorLearning();
   if (id === 'compare') return flow.viewedCompare;
   if (id === 'shared') return flow.submitted;
   if (id === 'result') return flow.submitted && flow.viewedResult;
@@ -321,7 +321,8 @@ function renderFlowProgress() {
     : '탐구를 모두 마쳤습니다. 다른 탭을 자유롭게 둘러보거나, 다른 사건도 살펴보세요.';
   box.innerHTML = `
     <ol class="flow-progress__list">${items}</ol>
-    <p class="flow-progress__next">${next}</p>`;
+    <p class="flow-progress__next">${next}</p>
+    <p class="flow-progress__newcomer">다른 학생이 이 기기로 이어서 참여하나요? <button type="button" class="before-card__link" data-new-participant>새 참여자로 시작</button></p>`;
 }
 
 function gotoFlowStep(id) {
@@ -391,6 +392,15 @@ function beforeKey(kind) { return `sm_before_${kind || ''}${currentEventId}`; }
 function getBefore() { return (Store && Store.storageGet(beforeKey())) || ''; }
 function setBefore(value) { if (Store) Store.storageSet(beforeKey(), value); }
 function isBeforeSkipped() { return !!(Store && Store.storageGet(beforeKey('skip_'))); }
+/* 제출이 끝나면 탐구 전 문장은 이 기기에서 지우고 "제출됨" 표시만 남깁니다 (다음 사람에게 보이지 않도록). */
+function isBeforeSubmitted() { return !!(Store && Store.storageGet(beforeKey('done_'))); }
+function clearBeforeAfterSubmit(eventId) {
+  if (!Store || !eventId) return;
+  const key = kind => `sm_before_${kind || ''}${eventId}`;
+  Store.storageRemove(key());
+  Store.storageRemove(key('skip_'));
+  Store.storageSet(key('done_'), '1');
+}
 
 /* 이 사건을 이전에 배우거나 접한 경험 (사건마다 한 번, 이 브라우저에만 임시 저장 → 등록 시 prior_learning) */
 let priorEditing = false;
@@ -438,6 +448,14 @@ function renderBeforeCard() {
       <span class="before-card__label">탐구 전 나의 한 문장</span>
       <span class="before-card__text">“${escapeHtml(saved)}”</span>
       <button type="button" class="before-card__link" data-before-action="edit">수정</button>
+      ${renderPriorQuestion()}`;
+    return;
+  }
+  if (!saved && isBeforeSubmitted() && !beforeEditing) {
+    box.className = 'before-card is-collapsed';
+    box.innerHTML = `
+      <span class="before-card__hint">탐구 전 문장은 제출과 함께 저장되었고, 이 기기에서는 지웠습니다.</span>
+      <button type="button" class="before-card__link" data-new-participant>다른 학생이 이어서 참여한다면: 새 참여자로 시작</button>
       ${renderPriorQuestion()}`;
     return;
   }
@@ -1704,6 +1722,10 @@ async function submitSharedNarrative() {
   termCheckConfirmedFor = null;
   document.querySelectorAll('[data-guide-reason]').forEach(cb => { cb.checked = false; });
   guideState.reasons = new Set();
+  // 제출에 성공했을 때만 탐구 전 문장을 이 기기에서 지웁니다 (실패하면 그대로 남아 다시 등록할 수 있음).
+  clearBeforeAfterSubmit(eventIdAtSubmit);
+  if (eventIdAtSubmit === currentEventId) { beforeEditing = false; renderBeforeCard(); }
+  renderNewcomerNotes();
 
   setSubmitStatus(result.legacy
     ? '공동 표현이 등록되었습니다. (일부 항목은 데이터베이스 확장 후 함께 저장됩니다)'
@@ -2695,6 +2717,89 @@ async function loadParticipantCount() {
 }
 
 /* ------------------------------------------------------------
+   새 참여자로 시작 (공용 기기)
+   · 같은 브라우저를 다음 학생이 쓸 때 이전 학생의 연령대·탐구 전 문장·학습 경험·진행 기록·
+     참여자 키·공감 기록이 이어지지 않도록, 이 기기의 Shared Memory 상태('sm_' 키)만 지웁니다.
+   · 데이터베이스에 이미 등록된 제안은 지우지 않습니다.
+   · 같은 학생이 계속하는 경우(새로고침 포함)에는 아무것도 지우지 않습니다 — 이 버튼을 눌렀을 때만 초기화합니다.
+   ------------------------------------------------------------ */
+
+/** 지우기 전에 확인이 필요한 "작성 중인 내용" */
+function draftInProgress() {
+  const items = [];
+  const val = id => (document.getElementById(id)?.value || '').trim();
+  if (val('userNarrative')) items.push('작성 중인 문장');
+  if (val('userReason')) items.push('작성 이유');
+  if (val('beforeInput') || (Store && Store.participantStorageKeys().some(k =>
+    /^sm_before_(?!skip_|prior_|done_)/.test(k) && (Store.storageGet(k) || '').trim()))) {
+    items.push('아직 제출하지 않은 탐구 전 문장');
+  }
+  return items;
+}
+
+function resetParticipantUiState() {
+  // 입력창·작성 가이드
+  ['userName', 'userNarrative', 'userReason', 'beforeInput'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.querySelectorAll('[data-guide-reason]').forEach(cb => { cb.checked = false; });
+  guideState.reasons = new Set();
+  writingLangChoice = null;
+  templateUsed = false;
+  termCheckConfirmedFor = null;
+  beforeEditing = false;
+  beforeSkipConfirm = false;
+  priorEditing = false;
+  memoryAgeFilter = 'all';
+  memoryCache = {};
+  setSubmitStatus('');
+  const next = document.getElementById('submitNext');
+  if (next) next.hidden = true;
+  document.getElementById('agePickerNext')?.setAttribute('hidden', '');
+  renderAgeOptions();
+  renderWritingLangOptions();
+  // 열려 있던 사건 화면도 지워진 상태로 다시 그립니다.
+  const event = currentEvent();
+  if (event) {
+    resetGuide(event);
+    loadFlow();
+    renderBeforeCard();
+    renderFlowProgress();
+    renderSharedList();
+    updateDraftPanel();
+  }
+}
+
+function startAsNewParticipant() {
+  if (!Store) return;
+  const pending = draftInProgress();
+  if (pending.length) {
+    let ok = false;
+    try {
+      ok = window.confirm(`${pending.join(', ')}이(가) 있습니다.\n새 참여자로 시작하면 이 기기에서 지워지며 되돌릴 수 없습니다.\n(이미 등록된 제안은 그대로 남습니다)\n\n계속할까요?`);
+    } catch (e) { ok = false; }
+    if (!ok) return;
+  }
+  Store.resetParticipant();
+  resetParticipantUiState();
+  renderNewcomerNotes();
+  const status = document.getElementById('newParticipantStatus');
+  if (status) {
+    status.textContent = '새 참여자로 시작합니다. 이전 참여자의 연령대·탐구 전 문장·진행 기록을 이 기기에서 지웠습니다. (이미 등록된 제안은 그대로 남아 있습니다)';
+    status.hidden = false;
+  }
+  navigateTo('home');
+  startExploration();   // 연령대가 지워졌으므로 연령대 선택부터 다시 시작합니다.
+}
+
+/** 이 기기에 이전 참여 기록이 있을 때만 "새 참여자로 시작" 안내를 보여줍니다 (처음 온 사람에게는 숨김). */
+function renderNewcomerNotes() {
+  const show = !!(Store && Store.hasParticipantState());
+  document.querySelectorAll('[data-newcomer-note]').forEach(el => { el.hidden = !show; });
+}
+
+/* ------------------------------------------------------------
    초기화 · 이벤트 연결
    ------------------------------------------------------------ */
 
@@ -2704,8 +2809,12 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAgeOptions();
   navigateTo('home');
   loadParticipantCount();
+  renderNewcomerNotes();
 
   document.getElementById('startButton')?.addEventListener('click', startExploration);
+  document.addEventListener('click', e => {
+    if (e.target.closest('[data-new-participant]')) startAsNewParticipant();
+  });
   document.addEventListener('click', e => {
     const age = e.target.closest('[data-age-value]');
     if (!age) return;

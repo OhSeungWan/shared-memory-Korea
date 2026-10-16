@@ -114,6 +114,13 @@
           <!-- 실제 Supabase 집계 기반 참여자 수 (집계 함수가 없거나 0명이면 숨김) -->
           <p class="hero__count" id="participantCount" hidden aria-live="polite"></p>
 
+          <!-- 공용 기기: 이 브라우저에 이전 참여 기록이 있을 때만 표시 (script.js renderNewcomerNotes) -->
+          <p class="newcomer-note" data-newcomer-note hidden>
+            이 기기에 이전 참여 기록이 있습니다. 다른 학생이라면
+            <button type="button" class="before-card__link" data-new-participant>새 참여자로 시작</button>
+          </p>
+          <p class="newcomer-status" id="newParticipantStatus" role="status" aria-live="polite" hidden></p>
+
           <!-- 참여 시작 영역: 연령대 선택 → 다음(역사 선택) -->
           <div class="age-picker" id="agePicker" role="region" aria-labelledby="agePickerTitle" hidden>
             <h2 class="age-picker__title" id="agePickerTitle">Shared Memory 참여하기</h2>
@@ -166,6 +173,10 @@
         <p class="page__eyebrow" id="eventsEyebrow">STEP 02</p>
         <h2 class="page__title" id="eventsTitle">어떤 역사에 대한 생각을 남겨볼까요?</h2>
         <p class="page__desc" id="eventsDesc">하나를 선택해주세요.<br />세 나라의 표현을 살펴본 뒤 당신의 생각을 한 문장으로 남길 수 있습니다.</p>
+        <p class="newcomer-note newcomer-note--center" data-newcomer-note hidden>
+          앞사람이 쓰던 기기인가요?
+          <button type="button" class="before-card__link" data-new-participant>새 참여자로 시작</button>
+        </p>
       </div>
 
       <!-- 사건 카드 컨테이너: script.js에서 자바스크립트로 동적 생성 -->
@@ -371,6 +382,7 @@
               <p class="shared-form__status" id="submitStatus" role="status" aria-live="polite"></p>
               <div class="shared-form__next" id="submitNext" hidden>
                 <button type="button" class="btn btn--small" data-goto-tab="memory">다른 사람들의 공동 기억 확인하기 →</button>
+                <p class="newcomer-note">다음 학생이 이 기기를 쓰나요? <button type="button" class="before-card__link" data-new-participant>새 참여자로 시작</button></p>
               </div>
             </div>
 

@@ -2392,3 +2392,14 @@ details.ai-result__section[open] > summary { margin-bottom: 0.75rem; }
   .glance { padding: 1.1rem 1rem; }
   .glance__cols, .source-flow { grid-template-columns: 1fr; }
 }
+
+
+/* ---------- 20. 공용 기기 — 새 참여자로 시작 (기존 링크 스타일 재사용) ---------- */
+.newcomer-note { font-size: 0.84rem; color: var(--ink-mute); margin-top: 0.6rem; }
+.newcomer-note--center { text-align: center; margin-top: 0.8rem; }
+.newcomer-status {
+  font-size: 0.84rem; color: var(--ink-soft); margin-top: 0.6rem;
+  background: var(--bg-soft); border-left: 3px solid var(--accent); border-radius: var(--radius);
+  padding: 0.5rem 0.8rem;
+}
+.flow-progress__newcomer { font-size: 0.78rem; color: var(--ink-mute); margin-top: 0.3rem; }
