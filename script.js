@@ -26,6 +26,7 @@ let memoryCache = {};                 // 연령대별로 다시 계산한 분석
 
 const Analyzer = window.SharedMemoryAnalyzer || null;
 const Gen = window.GenerationAnalysis || null;
+const Card = window.MemoryCard || null;
 const Guide = window.ContributionGuide || { STYLES: [], TEMPLATES: [], REASONS: [] };
 const Store = window.SharedStore || null;
 const MemoryMap = window.SharedMemoryMap || null;
@@ -50,6 +51,52 @@ function navigateTo(pageName) {
   const targetPage = document.querySelector(`[data-page-name="${pageName}"]`);
   if (targetPage) targetPage.classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  // 사건 화면·카드 화면에서만 주소에 사건 링크(#/e/사건)를 남깁니다. 다른 화면으로 가면 지웁니다.
+  if (pageName !== 'detail' && pageName !== 'card') setRouteHash(null);
+  if (pageName === 'qr') renderQrSheet();
+}
+
+/* ------------------------------------------------------------
+   사건별 바로가기 링크 (QR) — #/e/imjin
+   · 해시 주소라 GitHub Pages에서 서버 설정 없이 동작합니다.
+   · 주소를 바꿀 때 history.replaceState를 써서 뒤로 가기 기록을 늘리지 않습니다.
+   ------------------------------------------------------------ */
+
+function routeEventId() {
+  if (!Card) return null;
+  return Card.parseEventRoute(window.location.hash, window.location.search, eventsData.map(e => e.id));
+}
+
+function setRouteHash(eventId) {
+  if (!Card || !window.history || !window.history.replaceState) return;
+  const want = eventId ? Card.eventHash(eventId) : '';
+  if ((window.location.hash || '') === want) return;
+  if (!eventId && !/^#\/?e\//.test(window.location.hash || '')) return;   // 다른 해시는 건드리지 않음
+  try {
+    window.history.replaceState(null, '', window.location.pathname + window.location.search + want);
+  } catch (e) { /* file:// 등에서 실패해도 화면은 그대로 동작 */ }
+}
+
+function isReloadNavigation() {
+  try {
+    const nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+    return !!(nav && nav.type === 'reload');
+  } catch (e) { return false; }
+}
+
+function siteBaseUrl() {
+  return window.location.origin + window.location.pathname;
+}
+
+/** 링크로 들어온 경우 사건을 바로 엽니다. 이미 그 사건이 열려 있으면 아무것도 하지 않습니다. */
+function openRouteEvent(routeId) {
+  const id = routeId || routeEventId();
+  if (!id) return false;
+  const onDetail = document.querySelector('.page--detail.active, .page--card.active');
+  if (onDetail && id === currentEventId) return true;
+  eventsMode = 'participate';
+  openEventDetail(id);
+  return true;
 }
 
 function renderEventCards() {
@@ -94,6 +141,7 @@ function openEventDetail(eventId) {
   document.getElementById('detailHeader').innerHTML = `
     <div class="detail__era">${event.era}</div>
     <h2 class="detail__title">${event.title}</h2>
+    ${event.question ? `<p class="detail__question"><span class="detail__question-label">오늘의 질문</span>${escapeHtml(event.question)}</p>` : ''}
     <p class="detail__desc">${event.shortDesc}</p>
   `;
 
@@ -175,8 +223,10 @@ function openEventDetail(eventId) {
   resetGuide(event);
   rebuildDraftContext();
   updateDraftPanel();
+  resetCardState();
   loadSharedNarratives();
   navigateTo('detail');
+  setRouteHash(eventId);
   // "Shared Memory 보기"로 들어왔다면 결과(공동 기억 지도) 탭을 먼저 보여줍니다. 다른 탭은 그대로 이동 가능.
   if (eventsMode === 'memory') switchTab('memory');
 }
@@ -258,18 +308,18 @@ function switchTab(tabName) {
    ------------------------------------------------------------ */
 
 const FLOW_STEPS = [
-  { id: 'select', label: '사건 선택' },
+  { id: 'select', label: '질문' },
   { id: 'before', label: '처음 생각', hint: '아래에 지금 알고 있는 내용만으로 한 문장을 적어 주세요. 검색하거나 정답을 찾지 않아도 됩니다.' },
-  { id: 'compare', label: '서술 탐구', hint: '‘세 나라의 서술’을 차례로 읽고, ‘어떻게 다를까?’에서 차이를 확인해 보세요.' },
-  { id: 'shared', label: '내 한 문장', hint: '‘내 한 문장 쓰기’에서 이 역사를 당신의 한 문장으로 다시 써 보세요.' },
-  { id: 'result', label: '결과 확인', hint: '‘모두의 기억 보기’에서 다른 사람들의 표현과 비교해 보세요.' }
+  { id: 'compare', label: '서술 탐구', hint: '‘세 나라의 서술’을 차례로 읽고, ‘어떻게 다를까?’와 ‘사료로 확인’에서 차이와 근거를 살펴보세요.' },
+  { id: 'shared', label: '탐구 후 생각', hint: '‘내 한 문장 쓰기’에서 탐구한 뒤의 생각을 한 문장으로 적어 보세요.' },
+  { id: 'card', label: '나의 카드', hint: '‘My Memory Card 만들기’를 눌러 탐구 전·후 나의 생각을 카드로 받아 가세요.' }
 ];
 const COMPARE_DWELL_MS = 5000;        // 국가별 서술이 화면에 이만큼 보이면 "서술 확인"으로 기록
 
 let flow = null;
 
 function defaultFlow() {
-  return { viewedCompare: false, viewedNlp: false, viewedSources: false, submitted: false, viewedResult: false };
+  return { viewedCompare: false, viewedNlp: false, viewedSources: false, submitted: false, viewedResult: false, cardMade: false };
 }
 function flowKey() { return `sm_flow_${currentEventId}`; }
 
@@ -295,7 +345,8 @@ function flowStepDone(id) {
   if (id === 'select') return true;
   if (id === 'before') return !!getBefore() || isBeforeSkipped() || isBeforeSubmitted() || !!getPriorLearning();
   if (id === 'compare') return flow.viewedCompare;
-  if (id === 'shared') return flow.submitted;
+  if (id === 'shared') return flow.submitted || flow.cardMade || !!(document.getElementById('userNarrative')?.value || '').trim();
+  if (id === 'card') return flow.cardMade;
   if (id === 'result') return flow.submitted && flow.viewedResult;
   return false;
 }
@@ -320,7 +371,7 @@ function renderFlowProgress() {
   const next = current
     ? `<span class="flow-progress__next-label">다음</span> ${current.hint}
        <button type="button" class="before-card__link" data-flow-step="${current.id}">바로 가기</button>`
-    : '탐구를 모두 마쳤습니다. 다른 탭을 자유롭게 둘러보거나, 다른 사건도 살펴보세요.';
+    : '탐구를 모두 마쳤습니다. ‘모두의 기억 보기’에서 다른 사람들의 생각을 보거나, 다른 사건도 살펴보세요.';
   box.innerHTML = `
     <ol class="flow-progress__list">${items}</ol>
     <p class="flow-progress__next">${next}</p>
@@ -328,12 +379,21 @@ function renderFlowProgress() {
 }
 
 function gotoFlowStep(id) {
-  if (id === 'select') { navigateTo('events'); return; }
+  if (id === 'select') {
+    document.getElementById('detailHeader')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
   if (id === 'before') {
     const card = document.getElementById('beforeCard');
     if (card && !getBefore() && isBeforeSkipped()) { beforeEditing = true; renderBeforeCard(); }
     card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setTimeout(() => document.getElementById('beforeInput')?.focus({ preventScroll: true }), 300);
+    return;
+  }
+  if (id === 'card') {
+    if (flow && flow.cardMade && cardState.model) { openCardPage(); return; }
+    gotoTab('shared');
+    setTimeout(() => document.getElementById('makeCardButton')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 200);
     return;
   }
   gotoTab({ compare: 'compare', shared: 'shared', result: 'memory' }[id] || 'compare');
@@ -1664,6 +1724,13 @@ async function submitSharedNarrative() {
     setSubmitStatus('먼저 역사 사건을 선택해주세요.', 'error');
     return;
   }
+  // 공개는 카드와 별개인 선택 사항입니다. 동의 표시가 있을 때만 서버로 보냅니다.
+  const consent = document.getElementById('publishConsent');
+  if (consent && !consent.checked) {
+    setSubmitStatus('공개 등록은 선택 사항입니다. 공개하려면 위의 동의 상자에 체크해 주세요. 공개하지 않아도 My Memory Card는 만들 수 있어요.', 'info');
+    consent.focus();
+    return;
+  }
   if (!Store) {
     setSubmitStatus('저장 모듈(shared-store.js)을 불러오지 못했습니다.', 'error');
     return;
@@ -1728,6 +1795,10 @@ async function submitSharedNarrative() {
   termCheckConfirmedFor = null;
   document.querySelectorAll('[data-guide-reason]').forEach(cb => { cb.checked = false; });
   guideState.reasons = new Set();
+  // 카드는 제출 뒤에도 만들 수 있도록, 지우기 전에 이 창의 메모리에만 남겨 둡니다(저장소에는 남기지 않음).
+  cardMemo[eventIdAtSubmit] = { before: getBefore(), after: text, published: true };
+  const consentBox = document.getElementById('publishConsent');
+  if (consentBox) consentBox.checked = false;
   // 제출에 성공했을 때만 탐구 전 문장을 이 기기에서 지웁니다 (실패하면 그대로 남아 다시 등록할 수 있음).
   clearBeforeAfterSubmit(eventIdAtSubmit);
   // 다음 사람이 같은 창에서 "참여하기"를 눌러도 이어받지 않도록, 다음 참여 시작 때 다시 묻습니다.
@@ -1736,8 +1807,8 @@ async function submitSharedNarrative() {
   renderNewcomerNotes();
 
   setSubmitStatus(result.legacy
-    ? '공동 표현이 등록되었습니다. (일부 항목은 데이터베이스 확장 후 함께 저장됩니다)'
-    : '공동 표현이 등록되었습니다. 이제 다른 참여자들의 표현과 함께 볼 수 있어요.', 'ok');
+    ? '공동 표현이 등록되었습니다. (일부 항목은 데이터베이스 확장 후 함께 저장됩니다) 위의 ‘My Memory Card 만들기’로 카드도 받을 수 있어요.'
+    : '공동 표현이 등록되었습니다. 이제 다른 참여자들의 표현과 함께 볼 수 있어요. 위의 ‘My Memory Card 만들기’로 카드도 받을 수 있어요.', 'ok');
 
   if (eventIdAtSubmit === currentEventId) {
     markFlow({ submitted: true, viewedResult: false });
@@ -2619,6 +2690,309 @@ function renderMemoryMethod(a) {
 }
 
 /* ------------------------------------------------------------
+   My Memory Card — 개인 결과 카드
+   · 참여자가 직접 쓴 탐구 전·후 문장, 직접 고른 발견·질문, 실제로 열어 본 탐구 단계만 담습니다.
+   · 카드 내용은 서버로 보내지 않고 이 창의 메모리에만 둡니다(새로고침·새 참여자로 시작하면 사라짐).
+   ------------------------------------------------------------ */
+
+const cardMemo = {};                   // 사건 id → 제출 직전의 { before, after, published } (제출 후에도 카드를 만들 수 있게)
+const cardState = { eventId: null, options: [], picked: [], custom: '', question: '', model: null, before: '', after: '' };
+let cardDraftTimer = null;
+
+function resetCardState() {
+  cardState.eventId = currentEventId;
+  cardState.options = [];
+  cardState.picked = [];
+  cardState.custom = '';
+  cardState.question = '';
+  cardState.model = null;
+  cardState.before = '';
+  cardState.after = '';
+  ['customDiscovery', 'myQuestion'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const card = document.getElementById('memoryCard');
+  if (card) card.innerHTML = '';
+  setCardStatus('');
+  setCardActionStatus('');
+  if (document.querySelector('.page--card.active')) navigateTo(currentEventId ? 'detail' : 'home');
+}
+
+function setCardStatus(message, tone) {
+  const el = document.getElementById('cardStatus');
+  if (!el) return;
+  el.textContent = message || '';
+  el.className = 'shared-form__status' + (tone ? ` is-${tone}` : '');
+}
+
+function setCardActionStatus(message) {
+  const el = document.getElementById('cardActionStatus');
+  if (el) el.textContent = message || '';
+}
+
+/** 카드에 쓸 탐구 전·후 문장: 지금 화면의 입력이 먼저, 공개 등록 뒤라면 이 창에 남겨 둔 값 */
+function cardSentences() {
+  const memo = cardMemo[currentEventId] || {};
+  const typed = (document.getElementById('userNarrative')?.value || '').trim();
+  return {
+    before: getBefore() || (memo.before || ''),
+    after: typed || (memo.after || ''),
+    published: !!(memo.published || (flow && flow.submitted))
+  };
+}
+
+function makeMemoryCard() {
+  const event = currentEvent();
+  if (!event || !Card) { setCardStatus('카드 모듈을 불러오지 못했습니다.', 'error'); return; }
+  const sent = cardSentences();
+  if (!sent.after) {
+    setCardStatus('먼저 위의 STEP 3에 탐구 후 나의 한 문장을 적어 주세요. 한 문장이면 충분해요.', 'error');
+    document.getElementById('userNarrative')?.focus();
+    return;
+  }
+  if (Guide.findPlaceholderIssues) {
+    const ph = Guide.findPlaceholderIssues(sent.after, { templateUsed });
+    if (ph.blocked) { setCardStatus(Guide.placeholderMessage(ph), 'error'); document.getElementById('userNarrative')?.focus(); return; }
+  }
+  setCardStatus('');
+  if (cardState.eventId !== currentEventId) resetCardState();
+  cardState.before = sent.before;
+  cardState.after = sent.after;
+  cardState.published = sent.published;
+  cardState.options = Card.discoveryOptions(event, eventNlp);
+  cardState.picked = cardState.picked.filter(id => cardState.options.some(o => o.id === id));
+  markFlow({ cardMade: true });
+  openCardPage();
+}
+
+function openCardPage() {
+  renderDiscoveryOptions();
+  renderCardPreview();
+  navigateTo('card');
+  setRouteHash(currentEventId);
+  setTimeout(() => document.getElementById('memoryCard')?.focus({ preventScroll: true }), 300);
+}
+
+function currentCardModel() {
+  const event = currentEvent();
+  let change = null;
+  if (Analyzer && cardState.before && cardState.after) {
+    try { change = Analyzer.compareBeforeAfter(cardState.before, cardState.after, { narratives: eventNarratives(event) }); }
+    catch (e) { change = null; }
+  }
+  return Card.buildCardModel({
+    event,
+    before: cardState.before,
+    after: cardState.after,
+    discoveries: cardState.picked.map(id => cardState.options.find(o => o.id === id)).filter(Boolean),
+    customDiscovery: cardState.custom,
+    question: cardState.question,
+    change,
+    flow,
+    published: cardState.published,
+    date: new Date()
+  });
+}
+
+function renderDiscoveryOptions() {
+  const box = document.getElementById('discoveryOptions');
+  if (!box) return;
+  if (!cardState.options.length) {
+    box.innerHTML = '<p class="card-builder__desc">이 사건에서 고를 수 있는 항목이 없습니다. 아래에 직접 적어 주세요.</p>';
+    return;
+  }
+  const full = cardState.picked.length + (cardState.custom ? 1 : 0) >= Card.MAX_DISCOVERIES;
+  box.innerHTML = cardState.options.map(o => {
+    const on = cardState.picked.indexOf(o.id) >= 0;
+    return `<button type="button" class="guide-chip${on ? ' is-selected' : ''}" aria-pressed="${on}" data-discovery="${escapeAttr(o.id)}" title="${escapeAttr(o.text)}"${!on && full ? ' disabled' : ''}>${escapeHtml(o.chip)}</button>`;
+  }).join('');
+}
+
+function toggleDiscovery(id) {
+  const k = cardState.picked.indexOf(id);
+  if (k >= 0) cardState.picked.splice(k, 1);
+  else if (cardState.picked.length + (cardState.custom ? 1 : 0) < Card.MAX_DISCOVERIES) cardState.picked.push(id);
+  renderDiscoveryOptions();
+  renderCardPreview();
+}
+
+function renderCardPreview() {
+  const box = document.getElementById('memoryCard');
+  if (!box || !Card) return;
+  const m = currentCardModel();
+  cardState.model = m;
+  const section = (cls, label, body) => `<section class="memory-card__section ${cls}"><h4 class="memory-card__label">${label}</h4>${body}</section>`;
+  const change = m.change && (m.change.added.length || m.change.kept.length) ? `
+    <dl class="memory-card__change">
+      ${m.change.added.length ? `<div><dt>새로 쓴 말</dt><dd>${m.change.added.map(escapeHtml).join(' · ')}</dd></div>` : ''}
+      ${m.change.kept.length ? `<div><dt>계속 쓴 말</dt><dd>${m.change.kept.map(escapeHtml).join(' · ')}</dd></div>` : ''}
+    </dl>` : (m.change ? '<p class="memory-card__muted">탐구 전과 같은 단어로 다시 썼어요.</p>' : '');
+  box.setAttribute('tabindex', '-1');
+  box.innerHTML = `
+    <div class="memory-card__band" aria-hidden="true"><i class="is-korea"></i><i class="is-japan"></i><i class="is-china"></i></div>
+    <header class="memory-card__head">
+      <span class="memory-card__brand">SHARED MEMORY</span>
+      <span class="memory-card__no">MY MEMORY CARD · ${escapeHtml(m.date)}</span>
+    </header>
+    <div class="memory-card__event">
+      <div>
+        <div class="memory-card__era">${escapeHtml(m.era)}</div>
+        <h3 class="memory-card__title">${escapeHtml(m.title)}</h3>
+      </div>
+      <span class="memory-card__seal" aria-hidden="true">${escapeHtml(m.mark)}</span>
+    </div>
+    ${m.question ? `<p class="memory-card__question">${escapeHtml(m.question)}</p>` : ''}
+    ${section('memory-card__before', '탐구 전 · 나의 첫 생각', m.before
+      ? `<blockquote class="memory-card__quote memory-card__quote--before tier-${m.tiers.before}">“${escapeHtml(m.before)}”</blockquote>`
+      : '<p class="memory-card__muted">탐구 전 문장을 남기지 않았어요.</p>')}
+    <div class="memory-card__arrow" aria-hidden="true">↓</div>
+    ${section('memory-card__after', '탐구 후 · 나의 한 문장', `<blockquote class="memory-card__quote memory-card__quote--after tier-${m.tiers.after}">“${escapeHtml(m.after)}”</blockquote>${change}`)}
+    ${m.discoveries.length ? section('memory-card__found', '탐구하며 새롭게 발견한 관점', `<ul class="memory-card__list">${m.discoveries.map(d => `<li>${escapeHtml(d)}</li>`).join('')}</ul>`) : ''}
+    ${m.myQuestion ? section('memory-card__ask', '아직 남은 나의 질문', `<p class="memory-card__ask-text">${escapeHtml(m.myQuestion)}</p>`) : ''}
+    <ul class="memory-card__stamps" aria-label="탐구 기록">
+      ${m.stamps.map(st => `<li class="${st.done ? 'is-done' : ''}"><span class="memory-card__stamp" aria-hidden="true">${st.mark}</span><span>${st.label}</span><span class="sr-only">${st.done ? ' — 완료' : ' — 하지 않음'}</span></li>`).join('')}
+    </ul>
+    <footer class="memory-card__foot">
+      <p>참여자가 직접 쓴 문장으로 만든 카드입니다. 정답이나 점수를 뜻하지 않습니다.</p>
+      <p class="memory-card__sign"><span class="memory-card__logo" aria-hidden="true">共</span> Shared Memory · 동북아 역사 공동 기억 프로젝트</p>
+    </footer>`;
+  const share = document.querySelector('[data-card-action="share"]');
+  if (share) share.hidden = !(navigator.share && navigator.canShare);
+}
+
+async function cardCanvas() {
+  const canvas = document.createElement('canvas');
+  // 웹 글꼴이 준비된 뒤에 그려야 이미지의 글꼴이 화면과 같습니다. (불러오지 못하면 기본 글꼴로 그림)
+  try {
+    if (document.fonts && document.fonts.load) {
+      await Promise.race([
+        Promise.all([
+          document.fonts.load("900 64px 'Noto Serif KR'"), document.fonts.load("700 40px 'Noto Serif KR'"),
+          document.fonts.load("400 28px 'Noto Sans KR'"), document.fonts.load("600 28px 'Cormorant Garamond'")
+        ]),
+        new Promise(r => setTimeout(r, 2500))
+      ]);
+    }
+  } catch (e) { /* 기본 글꼴 */ }
+  const info = Card.drawCard(canvas, cardState.model || currentCardModel());
+  return { canvas, info };
+}
+
+function cardFileName() {
+  const m = cardState.model || {};
+  return `shared-memory-card-${m.eventId || 'event'}-${(m.date || '').replace(/\./g, '')}.png`;
+}
+
+async function saveCardImage() {
+  if (!Card) return;
+  setCardActionStatus('이미지를 만드는 중입니다…');
+  try {
+    const { canvas, info } = await cardCanvas();
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    if (!blob) throw new Error('이미지를 만들지 못했습니다.');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = cardFileName();
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    setCardActionStatus(`이미지(${info.width}×${info.height})를 저장했습니다.${info.truncated ? ' 긴 문장은 이미지에서 일부 생략되었습니다(화면 카드에는 전체가 보입니다).' : ''} 휴대폰에서 저장이 안 되면 카드를 길게 눌러 저장하거나 ‘인쇄 · PDF로 저장’을 써 주세요.`);
+  } catch (e) {
+    console.error('카드 이미지 오류:', e);
+    setCardActionStatus('이미지를 만들지 못했습니다. ‘인쇄 · PDF로 저장’을 이용해 주세요.');
+  }
+}
+
+async function shareCardImage() {
+  try {
+    const { canvas } = await cardCanvas();
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    const file = new File([blob], cardFileName(), { type: 'image/png' });
+    if (!navigator.canShare || !navigator.canShare({ files: [file] })) { await saveCardImage(); return; }
+    await navigator.share({ files: [file], title: 'My Memory Card — Shared Memory' });
+    setCardActionStatus('');
+  } catch (e) {
+    if (e && e.name === 'AbortError') return;      // 사용자가 공유 창을 닫음
+    setCardActionStatus('공유하지 못했습니다. ‘이미지로 저장’을 이용해 주세요.');
+  }
+}
+
+function handleCardAction(action) {
+  if (action === 'back') { navigateTo('detail'); setRouteHash(currentEventId); return; }
+  if (action === 'png') { saveCardImage(); return; }
+  if (action === 'share') { shareCardImage(); return; }
+  if (action === 'print') { window.print(); return; }
+  if (action === 'memory') { navigateTo('detail'); setRouteHash(currentEventId); gotoTab('memory'); return; }
+  if (action === 'publish') {
+    navigateTo('detail');
+    setRouteHash(currentEventId);
+    gotoTab('shared');
+    setTimeout(() => {
+      const box = document.querySelector('.finish-box__publish');
+      box?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById('publishConsent')?.focus({ preventScroll: true });
+    }, 250);
+  }
+}
+
+/* ------------------------------------------------------------
+   수업·전시용 QR 시트 — 사건별 바로가기 링크
+   · QR은 vendor/qrcode-generator로 이 기기에서 만듭니다(외부 QR 서비스 사용 안 함).
+   ------------------------------------------------------------ */
+
+function qrSvg(text) {
+  if (typeof qrcode !== 'function') return '';
+  try {
+    const qr = qrcode(0, 'M');         // 0 = 내용 길이에 맞는 크기 자동 선택, M = 오류 복원 15%
+    qr.addData(text, 'Byte');
+    qr.make();
+    // 여백(quiet zone)은 4칸 이상이어야 휴대폰 카메라가 잘 읽습니다. 설명은 바깥 요소의 aria-label로 붙입니다(id 중복 방지).
+    return qr.createSvgTag({ cellSize: 4, margin: 16, scalable: true });
+  } catch (e) {
+    console.error('QR 생성 오류:', e);
+    return '';
+  }
+}
+
+function renderQrSheet() {
+  const grid = document.getElementById('qrGrid');
+  if (!grid || !Card) return;
+  const base = siteBaseUrl();
+  grid.innerHTML = eventsData.map(e => {
+    const link = Card.eventLink(base, e.id);
+    const svg = qrSvg(link);
+    return `
+      <article class="qr-card">
+        <div class="qr-card__code" role="img" aria-label="${escapeAttr(e.title)} 바로가기 QR 코드">${svg || '<span class="nlp-meta">QR을 만들지 못했습니다</span>'}</div>
+        <div class="qr-card__body">
+          <div class="qr-card__era">${escapeHtml(e.era)}</div>
+          <h3 class="qr-card__title">${escapeHtml(e.title)}</h3>
+          ${e.question ? `<p class="qr-card__question">${escapeHtml(e.question)}</p>` : ''}
+          <p class="qr-card__cta">QR을 찍고 약 5분 동안 탐구해 보세요 · 로그인 없음</p>
+          <code class="qr-card__link">${escapeHtml(link)}</code>
+          <div class="qr-card__actions no-print">
+            <button type="button" class="before-card__link" data-qr-copy="${escapeAttr(link)}">링크 복사</button>
+            <a class="before-card__link" href="${escapeAttr(Card.eventHash(e.id))}">열어 보기</a>
+          </div>
+        </div>
+      </article>`;
+  }).join('');
+}
+
+async function copyQrLink(link, button) {
+  let ok = false;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(link); ok = true; }
+  } catch (e) { ok = false; }
+  if (!ok) { try { window.prompt('아래 링크를 복사해 주세요.', link); } catch (e) { /* 무시 */ } }
+  if (button) {
+    const text = button.textContent;
+    button.textContent = ok ? '복사했습니다' : '링크 복사';
+    if (ok) setTimeout(() => { button.textContent = text; }, 1800);
+  }
+}
+
+/* ------------------------------------------------------------
    첫 방문 온보딩 — 연령대(선택) · 참여자 수
    · 연령대는 이 브라우저에만 보관했다가 공동 표현을 등록할 때 age_group으로 함께 저장합니다.
    · 정확한 나이·생년월일·학교·이름·연락처는 묻지 않습니다.
@@ -2761,6 +3135,12 @@ function resetParticipantUiState(options) {
   }
   const beforeInput = document.getElementById('beforeInput');
   if (beforeInput) beforeInput.value = '';
+  // 카드: 이전 참여자의 문장이 남지 않도록 메모리·화면에서 모두 지웁니다 (제출 직전 전환이어도 카드 메모는 지움).
+  Object.keys(cardMemo).forEach(k => { delete cardMemo[k]; });
+  resetCardState();
+  // 공개 동의는 지금 쓰는 사람의 것이므로, 제출 직전 전환(keepDraft)에서는 그대로 둡니다.
+  const consentBox = document.getElementById('publishConsent');
+  if (consentBox && !keepDraft) consentBox.checked = false;
   termCheckConfirmedFor = null;
   beforeEditing = false;
   beforeSkipConfirm = false;
@@ -2928,11 +3308,45 @@ function renderNewcomerNotes() {
 
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-event-count]').forEach(el => { el.textContent = String(eventsData.length); });
+  // QR·링크로 들어온 경우(#/e/사건) 첫 화면을 거치지 않고 그 사건을 바로 엽니다.
+  // (첫 화면으로 이동하면 사건 주소가 지워지므로 먼저 읽어 둡니다)
+  // 새로고침은 예전처럼 첫 화면에서 다시 시작합니다 — 공용 기기에서 앞 사람이 보던 사건이 저절로 열리지 않도록.
+  const initialRouteId = isReloadNavigation() ? null : routeEventId();
   renderEventCards();
   renderAgeOptions();
   navigateTo('home');
   loadParticipantCount();
   renderNewcomerNotes();
+  if (initialRouteId) openRouteEvent(initialRouteId);
+  window.addEventListener('hashchange', () => { if (!openRouteEvent() && /^#\/?e\//.test(window.location.hash || '')) navigateTo('home'); });
+
+  // My Memory Card · QR 시트
+  document.getElementById('makeCardButton')?.addEventListener('click', makeMemoryCard);
+  document.querySelector('.page--card')?.addEventListener('click', e => {
+    const action = e.target.closest('[data-card-action]');
+    if (action) { handleCardAction(action.dataset.cardAction); return; }
+    const chip = e.target.closest('[data-discovery]');
+    if (chip) toggleDiscovery(chip.dataset.discovery);
+  });
+  document.getElementById('customDiscovery')?.addEventListener('input', e => {
+    cardState.custom = e.target.value;
+    clearTimeout(cardDraftTimer);
+    cardDraftTimer = setTimeout(() => { renderDiscoveryOptions(); renderCardPreview(); }, 200);
+  });
+  document.getElementById('myQuestion')?.addEventListener('input', e => {
+    cardState.question = e.target.value;
+    clearTimeout(cardDraftTimer);
+    cardDraftTimer = setTimeout(renderCardPreview, 200);
+  });
+  document.querySelector('.page--qr')?.addEventListener('click', e => {
+    const copy = e.target.closest('[data-qr-copy]');
+    if (copy) { copyQrLink(copy.dataset.qrCopy, copy); return; }
+    if (e.target.closest('[data-qr-action="print"]')) window.print();
+  });
+  document.getElementById('userNarrative')?.addEventListener('input', () => {
+    clearTimeout(cardDraftTimer);
+    cardDraftTimer = setTimeout(renderFlowProgress, 400);
+  });
 
   document.getElementById('startButton')?.addEventListener('click', startExploration);
   document.addEventListener('click', e => {

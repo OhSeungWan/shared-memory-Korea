@@ -14,11 +14,13 @@
                   서지·제공처를 확인한 자료(verification: 'verified' | 'partial')만 연결합니다. (tests에서 검사)
                   "이 자료를 인용해 썼다"는 뜻이 아니라 "이 서술을 확인할 때 볼 자료"라는 뜻입니다.
    · featured : 사건 목록에서 "먼저 살펴보기"로 표시할 대표 사례 (화면 순서는 이 배열 순서를 따릅니다)
+   · question : 탐구를 여는 "역사적 질문"(편집자 작성). 답을 정해 두지 않은 열린 질문이며, 사건 화면과 My Memory Card에 표시됩니다.
    ============================================================ */
 
 const eventsData = [
   {
     id: 'imjin',
+    question: '같은 전쟁을, 세 나라는 왜 서로 다른 이름으로 부를까요?',
     title: '임진왜란',
     titleJP: '文禄·慶長の役',
     titleCN: '万历朝鲜战争',
@@ -72,6 +74,7 @@ const eventsData = [
 
   {
     id: 'zainichi',
+    question: '재일조선인의 역사는 누구의 역사로, 어떻게 기억되어야 할까요?',
     title: '재일조선인',
     titleJP: '在日朝鮮人',
     titleCN: '在日朝鲜人',
@@ -123,6 +126,7 @@ const eventsData = [
 
   {
     id: 'culture',
+    question: '문화는 누가 주고 누가 받았을까요? 세 나라는 그 흐름에서 자신을 어디에 둘까요?',
     title: '한중일 문화 교류',
     titleJP: '東アジア文化交流',
     titleCN: '东亚文化交流',
@@ -172,6 +176,7 @@ const eventsData = [
 
   {
     id: 'tribute',
+    question: '조공 관계는 ‘복종’이었을까요, ‘외교’였을까요? 누구의 눈으로 보느냐에 따라 무엇이 달라질까요?',
     title: '조공 관계',
     titleJP: '朝貢関係',
     titleCN: '朝贡体制',
@@ -221,6 +226,7 @@ const eventsData = [
 
   {
     id: 'modern',
+    question: '같은 근대화의 시대를, 세 나라는 왜 성공·좌절·치욕으로 다르게 기억할까요?',
     title: '근대화 과정',
     titleJP: '近代化',
     titleCN: '近代化',
@@ -271,6 +277,7 @@ const eventsData = [
 
   {
     id: 'hiroshima',
+    question: '히로시마의 원폭 피해를 기억할 때, 조선인 피해자는 어디에 있을까요?',
     title: '히로시마 원폭과 조선인 피해자',
     titleJP: '広島原爆と朝鮮人被害者',
     titleCN: '广岛原爆与朝鲜人受害者',

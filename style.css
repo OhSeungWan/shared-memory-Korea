@@ -2429,3 +2429,246 @@ details.ai-result__section[open] > summary { margin-bottom: 0.75rem; }
 .participant-gate__actions .participant-gate__continue:hover { background: var(--accent-soft); }
 .participant-gate__note { font-size: 0.78rem; color: var(--ink-mute); margin-top: 0.8rem; line-height: 1.6; }
 body.has-participant-gate { overflow: hidden; }
+
+
+/* ============================================================
+   20. QR 5분 탐구 · My Memory Card
+   · 기존 변수(한지 베이지·먹색·accent·국가별 색)와 칩·버튼만 씁니다. 새 색상·큰 그림자 없음.
+   ============================================================ */
+
+/* ---------- 20-1. 사건 화면: 오늘의 질문 ---------- */
+.detail__question {
+  font-family: 'Noto Serif KR', serif;
+  font-size: 1.15rem;
+  font-weight: 500;
+  line-height: 1.6;
+  color: var(--ink);
+  margin: 0.6rem 0 0.8rem;
+  padding-left: 0.9rem;
+  border-left: 3px solid var(--accent);
+}
+.detail__question-label {
+  display: block;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: 0.08em;
+  margin-bottom: 0.15rem;
+}
+
+/* ---------- 20-2. 마무리: 카드 만들기 / 공개(선택) ---------- */
+.finish-box {
+  margin-top: 1.8rem;
+  border-top: 1px solid var(--line);
+  padding-top: 1.4rem;
+  display: grid;
+  gap: 1.2rem;
+}
+.finish-box__card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.3rem;
+}
+.finish-box__title {
+  font-family: 'Noto Serif KR', serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 0.3rem;
+}
+.finish-box__title--small { font-size: 0.95rem; }
+.finish-box__desc { font-size: 0.88rem; color: var(--ink-soft); line-height: 1.65; margin-bottom: 0.8rem; }
+.finish-box__card .btn--primary { margin-top: 0.2rem; animation: none; }
+.finish-box__publish {
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 1rem 1.3rem;
+}
+.consent-check {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+  line-height: 1.6;
+  margin-bottom: 0.8rem;
+  cursor: pointer;
+}
+.consent-check input { width: 1.2rem; height: 1.2rem; margin-top: 0.2rem; flex: none; accent-color: var(--accent); }
+.consent-check small { display: block; color: var(--ink-mute); font-size: 0.78rem; margin-top: 0.2rem; }
+.shared-form .finish-box .btn--small { margin-top: 0; min-height: 44px; }
+.shared-form__status.is-info { color: var(--ink-soft); }
+
+/* ---------- 20-3. 카드 화면 ---------- */
+.page__header--compact { margin-bottom: 2rem; }
+.card-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 460px) minmax(0, 1fr);
+  gap: 2.5rem;
+  align-items: start;
+  justify-content: center;
+}
+.card-stage { display: flex; flex-direction: column; gap: 0.9rem; }
+.card-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.card-actions .btn--primary { animation: none; }
+.card-actions .btn { min-height: 46px; }
+.card-actions__status { font-size: 0.85rem; color: var(--ink-soft); min-height: 1.2em; }
+.card-actions__note { font-size: 0.8rem; color: var(--ink-mute); line-height: 1.6; }
+
+.card-builder {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 1.6rem;
+  position: sticky;
+  top: 6rem;
+}
+.card-builder__title { font-size: 1.15rem; margin-bottom: 0.6rem; }
+.card-builder__step { padding: 0.9rem 0; border-top: 1px solid var(--line); }
+.card-builder__label { display: block; font-family: 'Noto Serif KR', serif; font-weight: 700; font-size: 0.95rem; margin-bottom: 0.3rem; }
+.card-builder__label small { font-family: 'Noto Sans KR', sans-serif; font-weight: 400; font-size: 0.78rem; color: var(--ink-mute); margin-left: 0.3rem; }
+.card-builder__desc { font-size: 0.82rem; color: var(--ink-mute); margin-bottom: 0.6rem; }
+.card-builder__chips { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 0.8rem; }
+.card-builder__chips .guide-chip { min-height: 40px; text-align: left; }
+.guide-chip[disabled] { opacity: 0.45; cursor: not-allowed; }
+.card-builder__sub { display: block; font-size: 0.82rem; color: var(--ink-soft); margin-bottom: 0.3rem; }
+.card-builder__next { border-top: 1px solid var(--line); padding-top: 1rem; display: flex; flex-direction: column; align-items: flex-start; gap: 0.6rem; }
+.card-builder__next .btn--small { min-height: 44px; }
+
+/* ---------- 20-4. My Memory Card (박물관 소장 카드 · 탐구 패스포트) ---------- */
+.memory-card {
+  position: relative;
+  background: var(--bg-soft);
+  border: 2px solid var(--ink);
+  outline: 1px solid var(--line);
+  outline-offset: -10px;
+  padding: 2rem 1.7rem 1.6rem;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+.memory-card:focus { outline: 1px solid var(--line); }
+.memory-card__band { position: absolute; top: 0; left: 0; right: 0; height: 5px; display: flex; }
+.memory-card__band i { flex: 1; }
+.memory-card__band .is-korea { background: var(--korea); }
+.memory-card__band .is-japan { background: var(--japan); }
+.memory-card__band .is-china { background: var(--china); }
+.memory-card__head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem;
+  border-bottom: 1px solid var(--line); padding-bottom: 0.6rem; margin-bottom: 1rem;
+  font-family: 'Cormorant Garamond', serif;
+}
+.memory-card__brand { font-weight: 600; letter-spacing: 0.12em; font-size: 0.95rem; }
+.memory-card__no { font-size: 0.78rem; color: var(--ink-mute); letter-spacing: 0.06em; white-space: nowrap; }
+.memory-card__event { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
+.memory-card__era { font-family: 'Cormorant Garamond', serif; color: var(--accent); font-size: 0.95rem; }
+.memory-card__title { font-size: 1.9rem; font-weight: 900; line-height: 1.25; }
+.memory-card__seal {
+  flex: none; width: 3.4rem; height: 3.4rem;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent); color: #fff;
+  font-family: 'Noto Serif KR', serif; font-weight: 900; font-size: 2.1rem;
+  border-radius: 2px; transform: rotate(-2deg);
+}
+.memory-card__question {
+  font-family: 'Noto Serif KR', serif; color: var(--ink-soft);
+  font-size: 0.98rem; line-height: 1.6; margin: 0.7rem 0 0.2rem;
+}
+.memory-card__section { border-top: 1px solid var(--line); margin-top: 1rem; padding-top: 0.8rem; }
+.memory-card__after, .memory-card__before { border-top: none; }
+.memory-card__before { margin-top: 1rem; border-top: 1px solid var(--line); }
+.memory-card__label { font-family: 'Noto Sans KR', sans-serif; font-size: 0.75rem; font-weight: 500; color: var(--accent); letter-spacing: 0.06em; margin-bottom: 0.35rem; }
+.memory-card__quote { font-family: 'Noto Serif KR', serif; line-height: 1.6; margin: 0; white-space: pre-line; }
+.memory-card__quote--before { color: var(--ink-soft); font-size: 1rem; }
+.memory-card__quote--after { font-weight: 700; font-size: 1.3rem; }
+.memory-card__quote--after.tier-medium { font-size: 1.15rem; }
+.memory-card__quote--after.tier-long { font-size: 1.02rem; }
+.memory-card__quote--after.tier-xlong { font-size: 0.95rem; font-weight: 500; }
+.memory-card__quote--before.tier-long, .memory-card__quote--before.tier-xlong { font-size: 0.92rem; }
+.memory-card__arrow { color: var(--accent); font-size: 1.2rem; line-height: 1; margin: 0.4rem 0 -0.2rem; }
+.memory-card__muted { font-size: 0.85rem; color: var(--ink-mute); }
+.memory-card__change { margin-top: 0.7rem; font-size: 0.82rem; display: grid; gap: 0.2rem; }
+.memory-card__change div { display: flex; gap: 0.6rem; }
+.memory-card__change dt { color: var(--ink-mute); flex: none; }
+.memory-card__change dd { color: var(--ink-soft); margin: 0; }
+.memory-card__list { list-style: none; display: grid; gap: 0.35rem; font-size: 0.92rem; line-height: 1.55; }
+.memory-card__list li { padding-left: 1.1rem; position: relative; }
+.memory-card__list li::before { content: ''; position: absolute; left: 0; top: 0.75em; width: 0.6rem; height: 2px; background: var(--accent); }
+.memory-card__ask-text { font-family: 'Noto Serif KR', serif; font-size: 1rem; line-height: 1.6; }
+.memory-card__stamps {
+  list-style: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem;
+  border-top: 1px solid var(--line); margin-top: 1.1rem; padding-top: 1rem; text-align: center;
+  font-size: 0.72rem; color: var(--ink-mute);
+}
+.memory-card__stamps li { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; }
+.memory-card__stamp {
+  width: 2.4rem; height: 2.4rem; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px dashed var(--line); color: var(--line);
+  font-family: 'Noto Serif KR', serif; font-weight: 700; font-size: 1.1rem;
+}
+.memory-card__stamps li.is-done { color: var(--ink-soft); }
+.memory-card__stamps li.is-done .memory-card__stamp { background: var(--accent); border: none; color: #fff; }
+.memory-card__foot { margin-top: 1.1rem; font-size: 0.72rem; color: var(--ink-mute); line-height: 1.6; }
+.memory-card__sign { margin-top: 0.3rem; color: var(--accent); font-family: 'Noto Serif KR', serif; font-weight: 500; font-size: 0.8rem; display: flex; align-items: center; gap: 0.4rem; }
+.memory-card__logo { background: var(--accent); color: #fff; width: 1.3rem; height: 1.3rem; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.8rem; border-radius: 1px; }
+
+/* ---------- 20-5. 수업·전시용 QR ---------- */
+.qr-guide {
+  max-width: 760px; margin: 0 auto 2rem;
+  background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  padding: 1.3rem 1.6rem;
+}
+.qr-guide ol { padding-left: 1.2rem; display: grid; gap: 0.4rem; font-size: 0.92rem; color: var(--ink-soft); margin-bottom: 0.7rem; }
+.qr-guide .btn--small { margin-top: 0.8rem; min-height: 44px; }
+.qr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.2rem; }
+.qr-card {
+  display: grid; grid-template-columns: 132px 1fr; gap: 1rem; align-items: start;
+  background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  padding: 1.1rem; break-inside: avoid;
+}
+.qr-card__code svg { width: 132px; height: 132px; display: block; background: #fff; }
+.qr-card__era { font-family: 'Cormorant Garamond', serif; color: var(--accent); font-size: 0.9rem; }
+.qr-card__title { font-size: 1.2rem; margin-bottom: 0.25rem; }
+.qr-card__question { font-family: 'Noto Serif KR', serif; font-size: 0.88rem; color: var(--ink-soft); line-height: 1.55; margin-bottom: 0.4rem; }
+.qr-card__cta { font-size: 0.78rem; color: var(--ink-mute); }
+.qr-card__link { display: block; font-size: 0.72rem; color: var(--ink-mute); word-break: break-all; margin-top: 0.3rem; }
+.qr-card__actions { display: flex; gap: 0.8rem; margin-top: 0.4rem; }
+.qr-note { text-align: center; font-size: 0.78rem; color: var(--ink-mute); margin-top: 1.5rem; }
+.intro__more a + a { margin-left: 1.2rem; }
+
+/* ---------- 20-6. 반응형 ---------- */
+@media (max-width: 1024px) {
+  .card-layout { grid-template-columns: minmax(0, 520px); }
+  .card-builder { position: static; }
+}
+@media (max-width: 640px) {
+  .detail__question { font-size: 1.05rem; }
+  .finish-box__card, .finish-box__publish { padding: 1rem; }
+  .finish-box__card .btn--primary { width: 100%; justify-content: center; }
+  .memory-card { padding: 1.6rem 1.1rem 1.3rem; }
+  .memory-card__title { font-size: 1.6rem; }
+  .memory-card__quote--after { font-size: 1.15rem; }
+  .memory-card__head { flex-direction: column; gap: 0.1rem; }
+  .card-actions .btn { flex: 1 1 100%; justify-content: center; }
+  .card-builder { padding: 1.2rem 1rem; }
+  .qr-card { grid-template-columns: 104px 1fr; }
+  .qr-card__code svg { width: 104px; height: 104px; }
+  .intro__more a { display: block; }
+  .intro__more a + a { margin-left: 0; margin-top: 0.4rem; }
+}
+
+/* ---------- 20-7. 인쇄 · PDF (카드 또는 QR 시트만) ---------- */
+@media print {
+  @page { margin: 12mm; }
+  body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .nav, .no-print, .participant-gate, .page:not(.active) { display: none !important; }
+  .page { padding: 0 !important; animation: none !important; }
+  .card-layout { display: block; }
+  .memory-card { max-width: 140mm; margin: 0 auto; break-inside: avoid; }
+  .page--qr .page__header { margin-bottom: 6mm; }
+  .qr-grid { grid-template-columns: repeat(2, 1fr); gap: 6mm; }
+  .qr-card { border-color: #999; }
+}

@@ -16,6 +16,8 @@
     - memory-map.js            : 공동 기억 지도(SVG) 시각화
     - shared-store.js          : Supabase 읽기·쓰기(하위 호환 처리 포함)
     - vendor/supabase-js/      : Supabase JS 라이브러리 (저장소 내 보관, 버전 고정)
+    - vendor/qrcode-generator/ : QR 코드 생성 라이브러리 (수업·전시용 QR 시트, 저장소 내 보관)
+    - memory-card.js           : 사건별 QR 링크 · My Memory Card(개인 결과 카드) 만들기·이미지 저장
     - script.js                : 화면 렌더링과 이벤트 처리
 
   이 파일은 SPA(Single Page Application) 구조입니다.
@@ -162,7 +164,10 @@
             <p>남겨 주신 한 문장은 다른 참여자들의 답변과 함께 분석되어, 사람들과 세대가 이 역사를 어떻게 기억하는지 보여줍니다. 이름이나 연락처는 수집하지 않습니다.</p>
           </div>
         </div>
-        <p class="intro__more"><a href="#" data-page="about">이 프로젝트가 가지는 의미 보기 →</a></p>
+        <p class="intro__more">
+          <a href="#" data-page="qr">수업·전시용 사건별 QR 만들기 →</a>
+          <a href="#" data-page="about">이 프로젝트가 가지는 의미 보기 →</a>
+        </p>
       </div>
     </section>
 
@@ -357,7 +362,7 @@
 
               <div class="guide-step">
                 <label class="shared-form__label" for="userNarrative">
-                  <span class="shared-form__num">STEP 3</span> 문장 작성 — 제안하는 공동 표현
+                  <span class="shared-form__num">STEP 3</span> 탐구 후 나의 한 문장 <small class="guide-step__opt">공동 표현</small>
                 </label>
                 <div id="guideTemplates" class="guide-templates"><!-- JS --></div>
                 <textarea id="userNarrative" class="shared-form__textarea" rows="4" maxlength="1000" placeholder="공동의 역사 표현을 입력하세요 / 请输入共同的历史表述 / 共同の歴史表現を入力してください / Enter a shared historical narrative"></textarea>
@@ -379,7 +384,27 @@
                 <textarea id="userReason" class="shared-form__textarea" rows="3" maxlength="1000" placeholder="예: 특정 국가의 시각만 강조하지 않으면서도, 침략과 피해라는 사실은 분명히 남기고 싶어서..."></textarea>
               </div>
 
-              <button class="btn btn--primary" id="submitNarrative">제안 등록하기</button>
+              <!-- 마무리: 카드 만들기(기기 안에서만) 와 공개 등록(별도 동의)을 분리합니다 -->
+              <div class="finish-box">
+                <div class="finish-box__card">
+                  <p class="finish-box__title">탐구를 마쳤다면, 나의 카드를 받아 가세요</p>
+                  <p class="finish-box__desc">탐구 전·후 나의 문장과 새롭게 발견한 관점을 한 장의 카드로 만들어 드려요. <strong>카드는 이 기기에서만 만들어지며, 어디에도 저장·공개되지 않습니다.</strong></p>
+                  <button type="button" class="btn btn--primary" id="makeCardButton">My Memory Card 만들기
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h12m0 0l-4-4m4 4l-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                  <p class="shared-form__status" id="cardStatus" role="status" aria-live="polite"></p>
+                </div>
+
+                <div class="finish-box__publish">
+                  <p class="finish-box__title finish-box__title--small">Shared Memory에 공개하기 <small class="guide-step__opt">선택</small></p>
+                  <p class="finish-box__desc">공개하면 이 문장이 다른 참여자들의 답변과 함께 ‘모두의 기억 보기’에 나타나고 익명 통계에 쓰입니다. 공개하지 않아도 카드는 그대로 받을 수 있어요.</p>
+                  <label class="consent-check">
+                    <input type="checkbox" id="publishConsent" />
+                    <span>위 문장·이유·닉네임을 <strong>다른 참여자에게 공개</strong>하고, 연령대·학습 경험·진행 기록을 <strong>익명 통계</strong>에 쓰는 데 동의합니다. <small>(만 14세 미만은 보호자나 선생님과 함께 결정해 주세요. 등록한 문장은 직접 지울 수 없습니다.)</small></span>
+                  </label>
+                  <button class="btn btn--small" id="submitNarrative">동의하고 공개 등록하기</button>
+                </div>
+              </div>
               <p class="shared-form__status" id="submitStatus" role="status" aria-live="polite"></p>
               <div class="shared-form__next" id="submitNext" hidden>
                 <button type="button" class="btn btn--small" data-goto-tab="memory">다른 사람들의 공동 기억 확인하기 →</button>
@@ -473,7 +498,9 @@
         <details class="faq__item"><summary>학생 데이터는 어떻게 보호하나요?</summary>
           <p>이름·연락처·학교·정확한 나이는 받지 않고, 연령대는 10년 단위로만 선택합니다. 공개되는 닉네임에 연락처·학교명이 들어가면 등록을 막습니다. 데이터베이스는 공개 키와 행 수준 보안(RLS)으로 보호되며, 참여자 구분용 무작위 키는 외부에서 읽을 수 없습니다. 5명 미만인 연령대는 서버에서 연령대 정보를 가립니다.</p></details>
         <details class="faq__item"><summary>실제 수업에서는 어떻게 쓰나요?</summary>
-          <p>한 차시(약 20–30분) 기준으로, ① 탐구 전 한 문장 → ② 세 나라의 서술 읽기 → ③ ‘어떻게 다를까?’에서 공통점·차이점 확인 → ④ 관련 사료 1개 확인 → ⑤ 내 한 문장 쓰기 → ⑥ 반 전체의 기억 보기 순서로 진행할 수 있습니다. 교사는 ⑥의 표현군과 탐구 전·후 변화를 토론 자료로 쓸 수 있습니다.</p></details>
+          <p><strong>QR로 5분 체험:</strong> 첫 화면의 ‘수업·전시용 사건별 QR 만들기’에서 사건별 QR을 인쇄해 나눠 주면, 학생은 QR을 찍어 바로 그 사건의 탐구를 시작하고 마지막에 My Memory Card를 저장합니다. <strong>한 차시 수업:</strong> 한 차시(약 20–30분) 기준으로, ① 탐구 전 한 문장 → ② 세 나라의 서술 읽기 → ③ ‘어떻게 다를까?’에서 공통점·차이점 확인 → ④ 관련 사료 1개 확인 → ⑤ 내 한 문장 쓰기 → ⑥ 반 전체의 기억 보기 순서로 진행할 수 있습니다. 교사는 ⑥의 표현군과 탐구 전·후 변화를 토론 자료로 쓸 수 있습니다.</p></details>
+        <details class="faq__item"><summary>My Memory Card에는 무엇이 담기고, 어디에 저장되나요?</summary>
+          <p>사건과 역사적 질문, 참여자가 직접 쓴 탐구 전·후 문장, 직접 고른 ‘새롭게 발견한 관점’과 남은 질문, 실제로 열어 본 탐구 단계(세 나라 서술·비교 분석·사료)가 담깁니다. 문장을 고치거나 요약하지 않으며, 탐구 전·후 비교는 실제로 새로 쓴 단어와 계속 쓴 단어만 보여 줍니다. 카드는 참여자의 기기 안에서만 만들어지고 서버로 보내지 않습니다. 공개 등록은 별도의 동의를 받을 때만 이루어지며, 공개하지 않아도 카드를 받을 수 있습니다.</p></details>
         <details class="faq__item"><summary>활동 전·후 변화가 교육 효과를 증명하나요?</summary>
           <p>그렇게 말할 수 없습니다. 탐구 전·후 문장의 어휘·개념 변화는 이 활동 안에서 관찰된 기술적(descriptive) 결과이며, 대조군이 없고 참여자가 무작위 표본이 아니므로 교육 효과를 증명하지 않습니다. “표현이 이렇게 달라졌다”는 관찰 자료로만 사용합니다.</p></details>
         <details class="faq__item"><summary>사료와 분석 결과는 어떻게 연결되나요?</summary>
@@ -484,6 +511,79 @@
         <p>"역사는 과거와 현재의 끊임없는 대화이다." — E. H. Carr</p>
         <p class="about__credit">Shared Memory Project · 2026 · 동북아 역사 교류 탐구 프로젝트</p>
       </div>
+    </section>
+
+    <!-- ============================================================
+         5. My Memory Card — 개인 결과 카드 (기기 안에서만 만들어짐)
+         ============================================================ -->
+    <section class="page page--card" data-page-name="card">
+      <button class="back-btn no-print" type="button" data-card-action="back">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M16 10H4m0 0l4-4m-4 4l4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>탐구로 돌아가기</span>
+      </button>
+
+      <div class="page__header page__header--compact no-print">
+        <p class="page__eyebrow">MY MEMORY CARD</p>
+        <h2 class="page__title">나의 역사 인식 카드</h2>
+        <p class="page__desc">탐구 전과 후, 내가 직접 쓴 문장으로 만든 카드입니다.<br />아래에서 새롭게 발견한 관점과 남은 질문을 골라 카드를 완성해 보세요.</p>
+      </div>
+
+      <div class="card-layout">
+        <!-- 카드 미리보기 (화면·인쇄) -->
+        <div class="card-stage">
+          <article class="memory-card" id="memoryCard" aria-label="My Memory Card"><!-- JS --></article>
+          <div class="card-actions no-print">
+            <button type="button" class="btn btn--primary" data-card-action="png">이미지로 저장</button>
+            <button type="button" class="btn btn--small" data-card-action="share" hidden>공유하기</button>
+            <button type="button" class="btn btn--small" data-card-action="print">인쇄 · PDF로 저장</button>
+          </div>
+          <p class="card-actions__status no-print" id="cardActionStatus" role="status" aria-live="polite"></p>
+          <p class="card-actions__note no-print">카드는 이 기기 안에서만 만들어지고, Shared Memory 서버로 전송되지 않습니다. 공용 기기라면 저장한 뒤 ‘새 참여자로 시작’을 눌러 주세요.</p>
+        </div>
+
+        <!-- 카드 다듬기 -->
+        <aside class="card-builder no-print" aria-labelledby="cardBuilderTitle">
+          <h3 class="card-builder__title" id="cardBuilderTitle">카드 다듬기</h3>
+          <div class="card-builder__step">
+            <div class="card-builder__label" id="discoveryLabel">탐구하며 새롭게 발견한 관점 <small>최대 3개 · 선택</small></div>
+            <p class="card-builder__desc">이 사건의 세 서술과 비교 분석에서 실제로 나온 내용입니다.</p>
+            <div class="card-builder__chips" id="discoveryOptions" role="group" aria-labelledby="discoveryLabel"><!-- JS --></div>
+            <label class="card-builder__sub" for="customDiscovery">직접 적기</label>
+            <input type="text" id="customDiscovery" class="shared-form__input" maxlength="80" placeholder="예: 같은 장군도 나라마다 다르게 평가한다" />
+          </div>
+          <div class="card-builder__step">
+            <label class="card-builder__label" for="myQuestion">아직 남은 나의 질문 <small>선택</small></label>
+            <input type="text" id="myQuestion" class="shared-form__input" maxlength="120" placeholder="예: 일본 교과서에는 실제로 어떻게 쓰여 있을까?" />
+          </div>
+          <div class="card-builder__next">
+            <button type="button" class="btn btn--small" data-card-action="memory">다른 사람들은 어떻게 기억했을까? →</button>
+            <button type="button" class="before-card__link" data-card-action="publish">내 문장을 Shared Memory에 공개하기 (선택)</button>
+            <p class="newcomer-note">다음 학생이 이 기기를 쓰나요? <button type="button" class="before-card__link" data-new-participant>새 참여자로 시작</button></p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         6. 수업·전시용 QR — 사건별 바로가기 링크
+         ============================================================ -->
+    <section class="page page--qr" data-page-name="qr">
+      <div class="page__header page__header--compact">
+        <p class="page__eyebrow">QR · FOR CLASSROOMS &amp; MUSEUMS</p>
+        <h2 class="page__title">사건별 QR로 바로 시작하기</h2>
+        <p class="page__desc">QR을 찍으면 첫 화면을 거치지 않고 해당 사건의 탐구가 바로 열립니다.<br />회원가입·로그인 없이 휴대폰 브라우저에서 약 5분 안에 체험하도록 구성했습니다.</p>
+      </div>
+      <div class="qr-guide no-print">
+        <ol>
+          <li><strong>인쇄하기</strong> — 아래 ‘QR 시트 인쇄’로 사건별 QR을 학습지·전시 패널에 붙입니다.</li>
+          <li><strong>찍고 시작</strong> — 학생·관람객은 QR을 찍고, 탐구 전 한 문장 → 세 나라 서술 → 탐구 후 한 문장 순서로 진행합니다.</li>
+          <li><strong>카드 받기</strong> — 마지막에 My Memory Card를 이미지로 저장합니다. 공개 등록은 각자 동의할 때만 합니다.</li>
+        </ol>
+        <p class="nlp-meta">공용 기기(교실 태블릿·전시용 기기)에서는 한 사람이 끝날 때마다 ‘새 참여자로 시작’을 눌러 주세요. 5분은 목표 시간이며, 실제 소요 시간은 참여자마다 다릅니다.</p>
+        <button type="button" class="btn btn--small" data-qr-action="print">QR 시트 인쇄 · PDF로 저장</button>
+      </div>
+      <div class="qr-grid" id="qrGrid"><!-- JS --></div>
+      <p class="qr-note">QR 코드는 이 기기에서 바로 만들며(외부 서비스 사용 안 함), 사이트 주소가 바뀌면 새로 인쇄해 주세요. ‘QR Code’는 DENSO WAVE의 등록상표입니다.</p>
     </section>
 
   </main>
@@ -516,6 +616,9 @@
   <script src="./generation-analysis.js"></script>
   <script src="./memory-map.js"></script>
   <script src="./shared-store.js"></script>
+  <!-- QR 코드 생성 (저장소 내 보관 · 수정 없는 원본 · vendor/qrcode-generator/VERSION.json) -->
+  <script src="./vendor/qrcode-generator/qrcode.js"></script>
+  <script src="./memory-card.js"></script>
   <script src="./script.js"></script>
 </body>
 </html>

@@ -15,6 +15,7 @@ async function writeAndSubmit(page, before, text) {
   await page.click('[data-before-action="save"]');
   await page.click('.tab[data-tab="shared"]');
   await page.fill('#userNarrative', text);
+  await page.check('#publishConsent');   // 공개 등록은 별도 동의
   await page.click('#submitNarrative');
   await page.waitForFunction(() => /등록되었습니다|실패/.test(document.getElementById('submitStatus').textContent));
 }
@@ -92,6 +93,7 @@ run('shared-device', async ({ browser, base, check, mockPage }) => {
   // 안전장치: 다음 학생 C가 B의 열린 화면에서 바로 문장을 써서 제출 → 제출 전에 물음
   const C = '세 나라의 서술은 다르지만 전쟁의 피해는 함께 기억해야 한다는 C의 문장';
   await page.fill('#userNarrative', C);
+  await page.check('#publishConsent');
   await page.click('#submitNarrative');
   check('선택 없이 제출하면 제출 전에 선택 창 (제출 안내 포함)', await gateVisible(page) && await page.isVisible('[data-gate-submit-note]'));
   check('선택 전에는 저장되지 않음', (await page.evaluate(() => window.__mockDb.read().shared_expressions.length)) === 2);
@@ -133,6 +135,7 @@ run('shared-device', async ({ browser, base, check, mockPage }) => {
   check('확인 창에서 취소하면 아무것도 지우지 않음', (await page.inputValue('#userNarrative')) === 'D가 작성 중인 문장' &&
     await page.evaluate(() => localStorage.getItem('sm_before_imjin') === 'D의 탐구 전 문장'));
   await page.evaluate(() => { window.__mockDb.failInsert = true; });
+  await page.check('#publishConsent');
   await page.click('#submitNarrative');
   await page.waitForFunction(() => /실패/.test(document.getElementById('submitStatus').textContent));
   check('제출 실패 시 작성 중인 문장 유지', (await page.inputValue('#userNarrative')) === 'D가 작성 중인 문장');
