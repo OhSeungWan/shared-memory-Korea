@@ -37,7 +37,7 @@ run('memory-card', async ({ browser, base, check, mockPage }) => {
   await page.click('[data-before-action="save"]');
   await page.evaluate(() => document.getElementById('narrativesGrid').scrollIntoView());
   await page.waitForFunction(() => flow && flow.viewedCompare, null, { timeout: 12000 });
-  check('국가별 서술을 실제로 본 뒤 진행 표시의 "서술 탐구" 완료', await page.$eval('.flow-progress__step:nth-child(3)', el => el.classList.contains('is-done')));
+  check('국가별 서술을 실제로 본 뒤 진행 표시의 STEP 2(세 나라 비교) 완료', await page.$eval('#flowProgress .flow-progress__step:nth-child(2)', el => el.classList.contains('is-done')));
   await page.click('.tab[data-tab="sources"]');
 
   await page.click('.tab[data-tab="shared"]');
@@ -123,7 +123,8 @@ run('memory-card', async ({ browser, base, check, mockPage }) => {
   await page.evaluate(() => { location.hash = '#/e/zainichi'; });
   await page.waitForSelector('.page--detail.active');
   if (await page.isVisible('#participantGate')) await page.click('[data-gate-choice="continue"]');
-  await page.click('.tab[data-tab="shared"]');
+  check('새 참여자는 STEP 1부터 시작 (탭은 STEP 2부터 보임)', await page.$eval('.page--detail', el => el.dataset.step) === '1' && !(await page.isVisible('.tab[data-tab="shared"]')));
+  await page.click('#flowProgress [data-step-goto="3"]');   // 진행 표시로 STEP 3에 바로 이동 (단계 이동은 막지 않음)
   await page.click('#makeCardButton');
   check('다음 참여자는 이전 참여자의 문장으로 카드를 만들 수 없음', /탐구 후 나의 한 문장/.test(await page.$eval('#cardStatus', el => el.textContent)));
   check('모바일 흐름에서 페이지 오류 없음', page.__errors.length === 0, page.__errors.join(' | '));

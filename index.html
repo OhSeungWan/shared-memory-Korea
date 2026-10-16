@@ -28,7 +28,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
   <title>Shared Memory Project — 동북아 역사 공동 기억 프로젝트</title>
   <meta name="description" content="한국·일본·중국의 서로 다른 역사 서술을 살펴보고, 이 역사를 어떻게 기억하는지 한 문장으로 남기는 익명 참여 프로젝트" />
 
@@ -72,8 +72,9 @@
          ============================================================ -->
     <section class="page page--home active" data-page-name="home">
 
-      <!-- 히어로 영역 -->
-      <div class="hero">
+      <!-- 히어로 영역 — 3초 안에 "무엇을 하는 곳인지 · 왜 참여하는지 · 어디를 누르는지"가 보이도록
+           메인 카피 → 한 줄 설명 → 큰 시작 버튼 → (옆/아래) 완성 카드 미리보기 순서로 배치합니다. -->
+      <div class="hero hero--v2">
         <!-- 배경 장식: 동북아 지도 SVG (style.css에서 위치 조정) -->
         <div class="hero__map" aria-hidden="true">
           <svg viewBox="0 0 600 500" xmlns="http://www.w3.org/2000/svg">
@@ -86,25 +87,26 @@
           </svg>
         </div>
 
+        <div class="hero__grid">
         <div class="hero__content">
-          <!-- 메인 카피: 한자/한글 조합으로 동북아 느낌 -->
-          <p class="hero__eyebrow">記憶 · 記憶 · 记忆</p>
+          <!-- 메인 카피 -->
+          <p class="hero__eyebrow">記憶 · 기억 · 记忆</p>
           <h1 class="hero__title">
-            <span class="hero__title-line">당신은 이 역사를</span>
-            <span class="hero__title-line hero__title-line--accent">어떻게 기억하고 있나요?</span>
+            <span class="hero__title-line">같은 역사,</span>
+            <span class="hero__title-line"><span class="hl-ink">다른 기억.</span></span>
+            <span class="hero__title-sub">당신은 어떻게 기억하나요?</span>
           </h1>
           <p class="hero__subtitle">
-            한국·일본·중국의 서로 다른 역사 서술을 살펴보고,<br />
-            당신의 생각을 한 문장으로 남겨주세요.<br />
-            모인 답변은 세대별·표현별로 분석되어 하나의 Shared Memory가 됩니다.
+            한·중·일 세 나라가 같은 사건을 어떻게 다르게 기록했는지 비교하고,
+            나의 생각을 담은 <strong>My Memory Card</strong>를 받아 가세요.
           </p>
 
           <!-- 참여 버튼: 연령대(선택)를 고른 뒤 역사 선택으로 이동 -->
           <div class="hero__cta">
-            <button class="btn btn--primary" id="startButton" type="button" aria-controls="agePicker" aria-expanded="false">
-              <span>5분 역사 인식 조사 참여하기</span>
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M4 10h12m0 0l-4-4m4 4l-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <button class="btn btn--primary btn--hero" id="startButton" type="button" aria-controls="agePicker" aria-expanded="false">
+              <span>5분 탐구 시작하기</span>
+              <svg width="22" height="22" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M4 10h12m0 0l-4-4m4 4l-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </button>
             <ul class="hero__meta" aria-label="참여 조건">
@@ -126,23 +128,45 @@
 
           <!-- 참여 시작 영역: 연령대 선택 → 다음(역사 선택) -->
           <div class="age-picker" id="agePicker" role="region" aria-labelledby="agePickerTitle" hidden>
-            <h2 class="age-picker__title" id="agePickerTitle">Shared Memory 참여하기</h2>
-            <p class="age-picker__question" id="agePickerQuestion">먼저 연령대만 알려주세요.<br />이름이나 연락처는 수집하지 않습니다.</p>
+            <h2 class="age-picker__title" id="agePickerTitle">시작 전, 연령대만 골라 주세요</h2>
+            <p class="age-picker__question" id="agePickerQuestion">이름이나 연락처는 묻지 않습니다. 답하지 않아도 괜찮아요.</p>
             <div class="age-picker__options" role="group" aria-labelledby="agePickerQuestion" data-age-options="start"><!-- JS --></div>
             <div class="age-picker__next" id="agePickerNext" hidden>
-              <button type="button" class="btn btn--small age-picker__next-btn" id="agePickerNextBtn">다음 → 역사 선택</button>
+              <button type="button" class="btn btn--small age-picker__next-btn" id="agePickerNextBtn">다음: 탐구할 역사 고르기 →</button>
             </div>
             <p class="age-picker__note">연령대는 세대별로 역사를 어떻게 기억하는지 살펴보는 익명 통계에만 쓰입니다.</p>
           </div>
-
-          <!-- 참여 방법 한눈에 보기 -->
-          <ol class="hero__steps" aria-label="참여 방법">
-            <li><span class="hero__step-num">1</span><div><strong>연령대 선택</strong><span>익명 통계를 위해 연령대만 선택해요.</span></div></li>
-            <li><span class="hero__step-num">2</span><div><strong>역사 하나 보기</strong><span>하나의 사건을 골라 세 나라의 표현을 살펴봐요.</span></div></li>
-            <li><span class="hero__step-num">3</span><div><strong>내 생각 남기기</strong><span>이 역사를 어떻게 표현하고 싶은지 한 문장으로 적어요.</span></div></li>
-            <li><span class="hero__step-num">4</span><div><strong>결과 확인</strong><span>다른 사람들과 세대는 어떻게 기억했는지 확인해요.</span></div></li>
-          </ol>
         </div>
+
+        <!-- 완성하면 받게 될 My Memory Card 미리보기 — 실제 참여 결과가 아닌 '예시'임을 화면에 표시합니다 -->
+        <figure class="hero-card" aria-labelledby="heroCardCaption">
+          <div class="hero-card__stack" aria-hidden="true">
+          <div class="hero-card__paper">
+            <div class="memory-card__band"><i class="is-korea"></i><i class="is-japan"></i><i class="is-china"></i></div>
+            <div class="hero-card__head"><span>SHARED MEMORY</span><span class="hero-card__tag">예시</span></div>
+            <div class="hero-card__event">
+              <div><small>1592 – 1598</small><strong>임진왜란</strong></div>
+              <span class="hero-card__seal">壬</span>
+            </div>
+            <p class="hero-card__label">탐구 전 · 나의 첫 생각</p>
+            <p class="hero-card__quote hero-card__quote--before">“일본과 조선이 싸운 전쟁”</p>
+            <p class="hero-card__arrow">↓</p>
+            <p class="hero-card__label">탐구 후 · 나의 한 문장</p>
+            <p class="hero-card__quote">“같은 전쟁을 세 나라는 서로 다른 이름과 기억으로 남겼다.”</p>
+            <ul class="hero-card__stamps"><li>서술</li><li>비교</li><li>사료</li></ul>
+          </div>
+          </div>
+          <figcaption class="hero-card__caption" id="heroCardCaption">탐구를 마치면 받는 <strong>나만의 Memory Card</strong> <small>(예시 문장)</small></figcaption>
+        </figure>
+        </div>
+
+        <!-- 탐구 4단계 한눈에 보기 (사건 화면의 STEP 1/4 ~ 4/4와 같은 이름) -->
+        <ol class="hero__steps hero__steps--v2" aria-label="탐구 4단계">
+          <li><span class="hero__step-num">1</span><strong>내가 아는 역사</strong></li>
+          <li><span class="hero__step-num">2</span><strong>세 나라 기록 비교</strong></li>
+          <li><span class="hero__step-num">3</span><strong>나의 최종 표현</strong></li>
+          <li><span class="hero__step-num">4</span><strong>Memory Card</strong></li>
+        </ol>
       </div>
 
       <!-- 프로젝트 소개 3개 카드 -->
@@ -176,9 +200,9 @@
          ============================================================ -->
     <section class="page page--events" data-page-name="events">
       <div class="page__header">
-        <p class="page__eyebrow" id="eventsEyebrow">STEP 02</p>
-        <h2 class="page__title" id="eventsTitle">어떤 역사에 대한 생각을 남겨볼까요?</h2>
-        <p class="page__desc" id="eventsDesc">하나를 선택해주세요.<br />세 나라의 표현을 살펴본 뒤 당신의 생각을 한 문장으로 남길 수 있습니다.</p>
+        <p class="page__eyebrow" id="eventsEyebrow">탐구할 역사 고르기</p>
+        <h2 class="page__title" id="eventsTitle">어떤 역사를 탐구해 볼까요?</h2>
+        <p class="page__desc" id="eventsDesc">하나를 고르면 STEP 1부터 바로 시작합니다.<br />처음이라면 ‘먼저 살펴보기’ 표시가 있는 사건을 권해요.</p>
         <p class="newcomer-note newcomer-note--center" data-newcomer-note hidden>
           앞사람이 쓰던 기기인가요?
           <button type="button" class="before-card__link" data-new-participant>새 참여자로 시작</button>
@@ -194,7 +218,8 @@
     <!-- ============================================================
          3. 국가별 서술 비교 페이지 (사건 상세)
          ============================================================ -->
-    <section class="page page--detail" data-page-name="detail">
+    <!-- data-step: 지금 보고 있는 탐구 단계 (1 내가 아는 역사 · 2 세 나라 비교 · 3 나의 표현). 4단계(카드)는 카드 화면입니다. -->
+    <section class="page page--detail" data-page-name="detail" data-step="1">
 
       <!-- 뒤로가기 버튼 -->
       <button class="back-btn" data-page="events">
@@ -204,8 +229,8 @@
         <span>사건 목록으로</span>
       </button>
 
-      <!-- 권장 탐구 흐름 (탭 이동을 막지 않는 안내용 표시) -->
-      <nav class="flow-progress" id="flowProgress" aria-label="권장 탐구 흐름"><!-- JS --></nav>
+      <!-- 탐구 4단계 진행 표시 (STEP n/4). 단계 이동을 막지 않습니다. -->
+      <nav class="flow-progress" id="flowProgress" aria-label="탐구 진행 단계"><!-- JS --></nav>
 
       <!-- 사건 제목 영역 -->
       <div class="detail__header" id="detailHeader">
@@ -230,26 +255,40 @@
 
       <!-- 탭 1: 국가별 서술 비교 -->
       <div class="tab-content active" data-tab-content="compare">
+        <div class="step-head">
+          <p class="step-head__kicker">STEP 2 · 세 나라 기록 비교</p>
+          <h3 class="step-head__q">세 나라는 같은 사건을 <span class="hl-ink">어떻게 다르게</span> 기록했을까요?</h3>
+          <p class="step-head__desc">세 기록을 차례로 읽고, 아래의 공통점·차이점 카드에서 무엇이 같고 다른지 확인해 보세요.</p>
+        </div>
         <p class="scope-note">
           <strong>읽기 전에</strong> 아래 세 서술은 각 나라의 교과서 원문이 아니라, Shared Memory가 비교를 위해 선정·요약한 서술입니다.
           각 국가의 모든 교과서나 역사 인식을 대표하지 않습니다. 카드 아래 “이 서술은 어떻게 작성했나요?”에서 함께 볼 자료를 확인할 수 있어요.
         </p>
+        <!-- 형광펜 범례: 강조는 NLP로 실제 계산된 표현에만 적용합니다 (script.js narrativeTextHtml) -->
+        <p class="hl-legend" id="hlLegend" hidden></p>
         <div class="narratives" id="narrativesGrid">
           <!-- JS가 한국/일본/중국 카드를 채워줍니다 -->
         </div>
 
-        <!-- 타임라인: 사건의 흐름 -->
-        <div class="timeline" id="timelineBox">
-          <h3 class="section-h">사건 타임라인</h3>
+        <!-- 공통점 · 차이점 카드 (사건 데이터의 이름 + 세 서술 텍스트의 NLP 계산 결과) -->
+        <div class="compare-sum" id="compareSummary" aria-live="polite"><!-- JS --></div>
+
+        <!-- 타임라인: 사건의 흐름 (자세히 보기) -->
+        <details class="more-box timeline" id="timelineBox">
+          <summary class="more-box__summary">사건 타임라인 자세히 보기</summary>
           <div class="timeline__track" id="timelineTrack">
             <!-- JS가 채워줍니다 -->
           </div>
-        </div>
+        </details>
 
-        <!-- 다음 단계 안내 (탭 이동을 강제하지 않음) -->
-        <div class="nlp-next">
-          <p>세 서술을 읽었다면, 세 나라가 <strong>무엇을 같이 말하고 무엇을 다르게 말하는지</strong> 한눈에 비교해 보세요.</p>
-          <button type="button" class="btn btn--small" data-goto-tab="ai">세 나라는 어떻게 다르게 말하고 있을까? →</button>
+        <!-- 더 깊이 보기 (탭 이동을 강제하지 않음) -->
+        <div class="deeper">
+          <p class="deeper__label">더 깊이 살펴보기 <small>(선택)</small></p>
+          <div class="deeper__links">
+            <button type="button" class="deeper__link" data-goto-tab="ai"><strong>어떻게 다를까?</strong><span>NLP 계산 과정·원문 근거</span></button>
+            <button type="button" class="deeper__link" data-goto-tab="keywords"><strong>단어 빈도</strong><span>키워드 비교 차트</span></button>
+            <button type="button" class="deeper__link" data-goto-tab="sources"><strong>사료로 확인</strong><span>관련 자료·확인 상태</span></button>
+          </div>
         </div>
       </div>
 
@@ -321,53 +360,41 @@
       <!-- 탭 5: 공동 표현 작성 (Guided Contribution) -->
       <div class="tab-content" data-tab-content="shared">
         <div class="shared-box">
-          <h3 class="section-h">이제 이 역사를 당신의 한 문장으로 다시 써보세요.</h3>
-          <p class="shared-box__desc">
-            세 나라의 서술을 읽었다면, 이제 당신이 쓸 차례입니다. <small class="nlp-meta">(공동 역사 서술 제안 · Guided Contribution)</small><br />
-            사실을 지우거나 약화시키지 않으면서, 서로 다른 관점을 함께 이해할 수 있는 한 문장을 남겨 주세요.
-          </p>
+          <div class="step-head">
+            <p class="step-head__kicker">STEP 3 · 새로운 관점과 나의 최종 표현</p>
+            <h3 class="step-head__q">탐구를 마친 지금, 이 역사를 <span class="hl-ink">어떻게 기억하고</span> 싶나요?</h3>
+            <p class="step-head__desc">사실을 지우거나 약화시키지 않으면서, 서로 다른 관점을 함께 이해할 수 있는 한 문장이면 충분해요. 정답은 없습니다.</p>
+          </div>
+
+          <!-- 탐구 전 나의 생각 다시 보기 (STEP 1에서 적은 문장, 이 기기 안에서만) -->
+          <p class="after-recall" id="afterRecall" hidden></p>
 
           <!-- 사료를 아직 보지 않았다면 짧게 권합니다 (필수 아님) -->
           <div class="source-nudge" id="sharedSourceNudge" hidden></div>
 
-          <div class="guide-intro">
-            <strong>처음 참여하시나요?</strong> 닉네임·연령대는 비워 둬도 됩니다. 아래 4단계를 차례로 따라가면 3분 안에 작성할 수 있어요.
-            정답이 정해진 활동이 아니며, 모든 선택은 참고용입니다.
-          </div>
-
           <div class="shared-layout">
             <!-- 입력 폼 -->
             <div class="shared-form">
-              <label class="shared-form__label" for="userName">
-                <span class="shared-form__num">①</span> 작성자(닉네임) <small class="guide-step__opt">선택 · 비워 두면 ‘익명’</small>
-              </label>
-              <input type="text" id="userName" class="shared-form__input" maxlength="40" autocomplete="off" placeholder="비워 두면 ‘익명’으로 등록됩니다 (예: 별명)" aria-describedby="userNameNote" />
-              <p class="shared-form__privacy shared-form__privacy--strong" id="userNameNote">닉네임은 선택사항이며 <strong>다른 참여자에게 공개됩니다.</strong> 실명·학교명·학년/반·연락처 등 개인정보는 입력하지 마세요.</p>
-
-              <div class="shared-form__label" id="formAgeLabel"><span class="shared-form__num">②</span> 연령대 <small class="guide-step__opt">선택 · 익명 통계용</small></div>
-              <div class="age-picker__options age-picker__options--form" role="group" aria-labelledby="formAgeLabel" data-age-options="form"><!-- JS --></div>
-              <p class="shared-form__privacy">참여 내용은 익명으로 프로젝트 개선과 통계 분석에 활용됩니다. 이름·연락처·생년월일 등 개인정보는 수집하지 않으며, 작성한 문장·이유·닉네임은 다른 참여자에게 공개됩니다. 5명 미만인 연령대는 서버에서 연령대 정보를 가립니다.</p>
-
-              <div class="guide-step">
-                <div class="shared-form__label"><span class="shared-form__num">STEP 1</span> 표현에 담고 싶은 핵심 요소 <small class="guide-step__opt">여러 개 선택 가능</small></div>
-                <p class="guide-step__desc">이 사건의 국가별 서술과 NLP 분석 결과에서 뽑은 요소입니다. 담고 싶은 것을 골라 보세요.</p>
-                <div id="guideConcepts" class="guide-concepts"><!-- JS --></div>
+              <!-- ① 새롭게 발견한 관점 (카드에 담깁니다 · 서버로 보내지 않음) -->
+              <div class="core-step">
+                <div class="core-step__label" id="discoveryStepLabel"><span class="core-step__num">①</span> 탐구하며 새롭게 발견한 관점 <small class="guide-step__opt">선택 · 최대 3개 · 카드에 담겨요</small></div>
+                <p class="guide-step__desc">이 사건의 세 서술과 비교 분석에서 실제로 나온 내용입니다.</p>
+                <div class="card-builder__chips" id="discoveryStep" role="group" aria-labelledby="discoveryStepLabel"><!-- JS --></div>
               </div>
 
-              <div class="guide-step">
-                <div class="shared-form__label"><span class="shared-form__num">STEP 2</span> 어떤 방식으로 표현하고 싶나요? <small class="guide-step__opt">하나 선택</small></div>
-                <div id="guideStyles" class="guide-styles" role="radiogroup" aria-label="표현 방식"><!-- JS --></div>
-                <p id="guideStyleHint" class="guide-step__hint" aria-live="polite"></p>
-              </div>
-
-              <div class="guide-step">
-                <label class="shared-form__label" for="userNarrative">
-                  <span class="shared-form__num">STEP 3</span> 탐구 후 나의 한 문장 <small class="guide-step__opt">공동 표현</small>
+              <!-- ② 나의 최종 표현 -->
+              <div class="core-step core-step--main">
+                <label class="core-step__label" for="userNarrative">
+                  <span class="core-step__num">②</span> 나의 최종 표현 <small class="guide-step__opt">한 문장 · 탐구 후</small>
                 </label>
-                <div id="guideTemplates" class="guide-templates"><!-- JS --></div>
-                <textarea id="userNarrative" class="shared-form__textarea" rows="4" maxlength="1000" placeholder="공동의 역사 표현을 입력하세요 / 请输入共同的历史表述 / 共同の歴史表現を入力してください / Enter a shared historical narrative"></textarea>
+                <textarea id="userNarrative" class="shared-form__textarea shared-form__textarea--main" rows="4" maxlength="1000" placeholder="예: 같은 전쟁이지만 세 나라는 서로 다른 이름과 기억으로 남겼다." aria-describedby="narrativeHelp"></textarea>
+                <p class="guide-step__hint" id="narrativeHelp">한국어·中文·日本語·English 모두 쓸 수 있어요. 막막하다면 아래 ‘참고 예시·문장 틀’을 열어 보세요.</p>
                 <!-- 역사 용어 확인: 확실한 국호·연대 불일치만 부드럽게 안내 (제출은 막지 않음) -->
                 <p class="term-check" id="termCheck" role="status" aria-live="polite" hidden></p>
+                <details class="more-box more-box--inline">
+                  <summary class="more-box__summary">참고 예시·문장 틀 보기</summary>
+                  <div id="guideTemplates" class="guide-templates"><!-- JS --></div>
+                </details>
                 <!-- 작성 언어: 고르지 않으면 자동 감지 (한자만 있는 문장은 중국어·일본어 구분이 어려워 직접 선택을 권합니다) -->
                 <div class="before-card__prior">
                   <span class="before-card__prior-q" id="writingLangLabel">작성 언어 <small>(선택하지 않으면 자동 감지)</small></span>
@@ -376,28 +403,52 @@
                 </div>
               </div>
 
-              <div class="guide-step">
-                <label class="shared-form__label" for="userReason">
-                  <span class="shared-form__num">STEP 4</span> 그렇게 표현한 이유
-                </label>
-                <div id="guideReasons" class="guide-reasons"><!-- JS --></div>
-                <textarea id="userReason" class="shared-form__textarea" rows="3" maxlength="1000" placeholder="예: 특정 국가의 시각만 강조하지 않으면서도, 침략과 피해라는 사실은 분명히 남기고 싶어서..."></textarea>
-              </div>
-
-              <!-- 마무리: 카드 만들기(기기 안에서만) 와 공개 등록(별도 동의)을 분리합니다 -->
-              <div class="finish-box">
-                <div class="finish-box__card">
-                  <p class="finish-box__title">탐구를 마쳤다면, 나의 카드를 받아 가세요</p>
-                  <p class="finish-box__desc">탐구 전·후 나의 문장과 새롭게 발견한 관점을 한 장의 카드로 만들어 드려요. <strong>카드는 이 기기에서만 만들어지며, 어디에도 저장·공개되지 않습니다.</strong></p>
-                  <button type="button" class="btn btn--primary" id="makeCardButton">My Memory Card 만들기
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h12m0 0l-4-4m4 4l-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  </button>
-                  <p class="shared-form__status" id="cardStatus" role="status" aria-live="polite"></p>
+              <!-- 표현을 다듬는 도구 (자세히 보기 · 모두 선택) -->
+              <details class="more-box">
+                <summary class="more-box__summary">표현을 다듬는 도구 더 보기 <small>핵심 요소 · 표현 방식 · 이유 (모두 선택)</small></summary>
+                <div class="guide-intro">
+                  정답이 정해진 활동이 아니며, 모든 선택은 참고용입니다. 공개 등록을 하면 고른 요소·방식·이유가 함께 저장됩니다.
+                </div>
+                <div class="guide-step">
+                  <div class="shared-form__label">표현에 담고 싶은 핵심 요소 <small class="guide-step__opt">여러 개 선택 가능</small></div>
+                  <p class="guide-step__desc">이 사건의 국가별 서술과 NLP 분석 결과에서 뽑은 요소입니다. 담고 싶은 것을 골라 보세요.</p>
+                  <div id="guideConcepts" class="guide-concepts"><!-- JS --></div>
                 </div>
 
-                <div class="finish-box__publish">
+                <div class="guide-step">
+                  <div class="shared-form__label">어떤 방식으로 표현하고 싶나요? <small class="guide-step__opt">하나 선택</small></div>
+                  <div id="guideStyles" class="guide-styles" role="radiogroup" aria-label="표현 방식"><!-- JS --></div>
+                  <p id="guideStyleHint" class="guide-step__hint" aria-live="polite"></p>
+                </div>
+
+                <div class="guide-step">
+                  <label class="shared-form__label" for="userReason">그렇게 표현한 이유</label>
+                  <div id="guideReasons" class="guide-reasons"><!-- JS --></div>
+                  <textarea id="userReason" class="shared-form__textarea" rows="3" maxlength="1000" placeholder="예: 특정 국가의 시각만 강조하지 않으면서도, 침략과 피해라는 사실은 분명히 남기고 싶어서..."></textarea>
+                </div>
+              </details>
+
+              <!-- 마무리: 카드 만들기(기기 안에서만 · 화면 아래 고정 버튼) 와 공개 등록(별도 동의)을 분리합니다 -->
+              <div class="finish-box">
+                <div class="finish-box__card">
+                  <p class="finish-box__title">다 썼다면, 아래 <strong>‘My Memory Card 만들기’</strong>를 눌러 카드를 받으세요</p>
+                  <p class="finish-box__desc">탐구 전·후 나의 문장과 새롭게 발견한 관점을 한 장의 카드로 만들어 드려요. <strong>카드는 이 기기에서만 만들어지며, 어디에도 저장·공개되지 않습니다.</strong></p>
+                </div>
+
+                <div class="finish-box__publish" id="publishBox">
                   <p class="finish-box__title finish-box__title--small">Shared Memory에 공개하기 <small class="guide-step__opt">선택</small></p>
                   <p class="finish-box__desc">공개하면 이 문장이 다른 참여자들의 답변과 함께 ‘모두의 기억 보기’에 나타나고 익명 통계에 쓰입니다. 공개하지 않아도 카드는 그대로 받을 수 있어요.</p>
+
+                  <label class="shared-form__label" for="userName">
+                    작성자(닉네임) <small class="guide-step__opt">선택 · 비워 두면 ‘익명’</small>
+                  </label>
+                  <input type="text" id="userName" class="shared-form__input" maxlength="40" autocomplete="off" placeholder="비워 두면 ‘익명’으로 등록됩니다 (예: 별명)" aria-describedby="userNameNote" />
+                  <p class="shared-form__privacy shared-form__privacy--strong" id="userNameNote">닉네임은 선택사항이며 <strong>다른 참여자에게 공개됩니다.</strong> 실명·학교명·학년/반·연락처 등 개인정보는 입력하지 마세요.</p>
+
+                  <div class="shared-form__label" id="formAgeLabel">연령대 <small class="guide-step__opt">선택 · 익명 통계용</small></div>
+                  <div class="age-picker__options age-picker__options--form" role="group" aria-labelledby="formAgeLabel" data-age-options="form"><!-- JS --></div>
+                  <p class="shared-form__privacy">참여 내용은 익명으로 프로젝트 개선과 통계 분석에 활용됩니다. 이름·연락처·생년월일 등 개인정보는 수집하지 않으며, 작성한 문장·이유·닉네임은 다른 참여자에게 공개됩니다. 5명 미만인 연령대는 서버에서 연령대 정보를 가립니다.</p>
+
                   <label class="consent-check">
                     <input type="checkbox" id="publishConsent" />
                     <span>위 문장·이유·닉네임을 <strong>다른 참여자에게 공개</strong>하고, 연령대·학습 경험·진행 기록을 <strong>익명 통계</strong>에 쓰는 데 동의합니다. <small>(만 14세 미만은 보호자나 선생님과 함께 결정해 주세요. 등록한 문장은 직접 지울 수 없습니다.)</small></span>
@@ -411,7 +462,6 @@
                 <p class="newcomer-note">다음 학생이 이 기기를 쓰나요? <button type="button" class="before-card__link" data-new-participant>새 참여자로 시작</button></p>
               </div>
             </div>
-
             <!-- 작성 중 실시간 표현 분석 -->
             <aside class="draft-panel" id="draftPanel" aria-live="polite">
               <!-- JS가 채워줍니다 -->
@@ -446,6 +496,27 @@
           </p>
           <div id="memoryResult">
             <!-- JS가 채워줍니다 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 단계별 주요 행동 버튼 (휴대폰에서는 화면 아래에 고정, 키보드가 열리면 키보드 위로 올라옵니다)
+           단계마다 버튼 하나만 보입니다. script.js renderStepCta -->
+      <div class="step-cta no-print" id="stepCta">
+        <div class="step-cta__inner">
+          <p class="step-cta__hint" id="stepCtaHint" role="status" aria-live="polite" hidden></p>
+          <p class="shared-form__status step-cta__hint" id="cardStatus" role="status" aria-live="polite"></p>
+          <div class="step-cta__row">
+            <button type="button" class="step-cta__back" data-step-back hidden>
+              <span aria-hidden="true">←</span> <span>이전</span><span class="sr-only"> 단계로 돌아가기</span>
+            </button>
+            <div class="step-cta__main-wrap">
+              <span class="step-cta__step" id="stepCtaStep">STEP 1/4</span>
+              <button type="button" class="btn btn--primary step-cta__main" data-step-main="1" data-before-action="save"><span class="step-cta__label">내 생각 저장하고 세 나라 기록 보기</span><span aria-hidden="true">→</span></button>
+              <button type="button" class="btn btn--primary step-cta__main" data-step-main="1-next" data-step-goto="2" hidden><span>세 나라의 기록 보러 가기</span><span aria-hidden="true">→</span></button>
+              <button type="button" class="btn btn--primary step-cta__main" data-step-main="2" data-step-goto="3" hidden><span>발견한 관점으로 내 표현 쓰기</span><span aria-hidden="true">→</span></button>
+              <button type="button" class="btn btn--primary step-cta__main" data-step-main="3" id="makeCardButton" hidden><span>My Memory Card 만들기</span><span aria-hidden="true">→</span></button>
+            </div>
           </div>
         </div>
       </div>
@@ -519,23 +590,28 @@
     <section class="page page--card" data-page-name="card">
       <button class="back-btn no-print" type="button" data-card-action="back">
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M16 10H4m0 0l4-4m-4 4l4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span>탐구로 돌아가기</span>
+        <span>STEP 3 · 내 표현 고치기</span>
       </button>
 
-      <div class="page__header page__header--compact no-print">
-        <p class="page__eyebrow">MY MEMORY CARD</p>
-        <h2 class="page__title">나의 역사 인식 카드</h2>
-        <p class="page__desc">탐구 전과 후, 내가 직접 쓴 문장으로 만든 카드입니다.<br />아래에서 새롭게 발견한 관점과 남은 질문을 골라 카드를 완성해 보세요.</p>
+      <!-- STEP 4/4 진행 표시 (script.js renderFlowProgress가 함께 그립니다) -->
+      <nav class="flow-progress no-print" id="cardProgress" aria-label="탐구 진행 단계"><!-- JS --></nav>
+
+      <div class="page__header page__header--compact page__header--left no-print">
+        <h2 class="page__title">나의 <span class="hl-ink">Memory Card</span>가 완성되었어요</h2>
+        <p class="page__desc">탐구 전과 후, 내가 직접 쓴 문장으로 만든 카드입니다. <strong>이미지로 저장</strong>해 간직하세요.</p>
       </div>
 
       <div class="card-layout">
         <!-- 카드 미리보기 (화면·인쇄) -->
         <div class="card-stage">
           <article class="memory-card" id="memoryCard" aria-label="My Memory Card"><!-- JS --></article>
+          <!-- STEP 4의 주요 행동: 이미지로 저장 (휴대폰에서는 화면 아래에 붙음) -->
           <div class="card-actions no-print">
-            <button type="button" class="btn btn--primary" data-card-action="png">이미지로 저장</button>
+            <button type="button" class="btn btn--primary" data-card-action="png">이미지로 저장 <span aria-hidden="true">↓</span></button>
+          </div>
+          <div class="card-actions card-actions--more no-print">
             <button type="button" class="btn btn--small" data-card-action="share" hidden>공유하기</button>
-            <button type="button" class="btn btn--small" data-card-action="print">인쇄 · PDF로 저장</button>
+            <button type="button" class="btn btn--small btn--ghost" data-card-action="print">인쇄 · PDF로 저장</button>
           </div>
           <p class="card-actions__status no-print" id="cardActionStatus" role="status" aria-live="polite"></p>
           <p class="card-actions__note no-print">카드는 이 기기 안에서만 만들어지고, Shared Memory 서버로 전송되지 않습니다. 공용 기기라면 저장한 뒤 ‘새 참여자로 시작’을 눌러 주세요.</p>
@@ -543,7 +619,7 @@
 
         <!-- 카드 다듬기 -->
         <aside class="card-builder no-print" aria-labelledby="cardBuilderTitle">
-          <h3 class="card-builder__title" id="cardBuilderTitle">카드 다듬기</h3>
+          <h3 class="card-builder__title" id="cardBuilderTitle">카드 다듬기 <small>선택</small></h3>
           <div class="card-builder__step">
             <div class="card-builder__label" id="discoveryLabel">탐구하며 새롭게 발견한 관점 <small>최대 3개 · 선택</small></div>
             <p class="card-builder__desc">이 사건의 세 서술과 비교 분석에서 실제로 나온 내용입니다.</p>
@@ -576,7 +652,7 @@
       <div class="qr-guide no-print">
         <ol>
           <li><strong>인쇄하기</strong> — 아래 ‘QR 시트 인쇄’로 사건별 QR을 학습지·전시 패널에 붙입니다.</li>
-          <li><strong>찍고 시작</strong> — 학생·관람객은 QR을 찍고, 탐구 전 한 문장 → 세 나라 서술 → 탐구 후 한 문장 순서로 진행합니다.</li>
+          <li><strong>찍고 시작</strong> — 학생·관람객은 QR을 찍고, 화면 아래 버튼을 따라 STEP 1 내가 아는 역사 → STEP 2 세 나라 기록 비교 → STEP 3 나의 최종 표현 → STEP 4 Memory Card 순서로 진행합니다.</li>
           <li><strong>카드 받기</strong> — 마지막에 My Memory Card를 이미지로 저장합니다. 공개 등록은 각자 동의할 때만 합니다.</li>
         </ol>
         <p class="nlp-meta">공용 기기(교실 태블릿·전시용 기기)에서는 한 사람이 끝날 때마다 ‘새 참여자로 시작’을 눌러 주세요. 5분은 목표 시간이며, 실제 소요 시간은 참여자마다 다릅니다.</p>

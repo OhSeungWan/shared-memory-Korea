@@ -137,6 +137,8 @@ function openEventDetail(eventId) {
   if (!ensureParticipantChoice(() => openEventDetail(eventId), 'event')) return;
 
   currentEventId = eventId;
+  // 서술 NLP 결과는 형광펜·공통점/차이점 카드·작성 가이드·사료 연결·공동 기억 지도에서 쓰므로 먼저 한 번 계산합니다.
+  eventNlp = computeEventNlp(event);
 
   document.getElementById('detailHeader').innerHTML = `
     <div class="detail__era">${event.era}</div>
@@ -163,19 +165,22 @@ function openEventDetail(eventId) {
           </div>
         </div>
         <h4 class="narrative-card__title">${n.title}</h4>
-        <p class="narrative-card__text">${n.text}</p>
+        <p class="narrative-card__text">${narrativeTextHtml(c.key, n)}</p>
 
-        <div class="narrative-card__section">
-          <div class="narrative-card__label">핵심 키워드</div>
-          <div class="narrative-card__keywords">
-            ${n.keywords.map(k => `<span class="narrative-card__keyword">${k}</span>`).join('')}
+        <details class="narrative-card__more">
+          <summary>핵심 키워드 · 편집자 해설 보기</summary>
+          <div class="narrative-card__section">
+            <div class="narrative-card__label">핵심 키워드</div>
+            <div class="narrative-card__keywords">
+              ${n.keywords.map(k => `<span class="narrative-card__keyword">${k}</span>`).join('')}
+            </div>
           </div>
-        </div>
 
-        <div class="narrative-card__section">
-          <div class="narrative-card__label">표현 특징 (편집자 해설)</div>
-          <p class="narrative-card__feature">${n.feature}</p>
-        </div>
+          <div class="narrative-card__section">
+            <div class="narrative-card__label">표현 특징 (편집자 해설)</div>
+            <p class="narrative-card__feature">${n.feature}</p>
+          </div>
+        </details>
 
         ${renderNarrativeBasis(event, c)}
       </div>
@@ -192,8 +197,6 @@ function openEventDetail(eventId) {
   document.getElementById('aiResult').classList.remove('show');
   document.getElementById('aiResult').innerHTML = '';
 
-  // 서술 NLP 결과는 작성 가이드·사료 연결·공동 기억 지도에서도 쓰므로 먼저 한 번 계산합니다.
-  eventNlp = computeEventNlp(event);
   nlpAnalysis = null;
   nlpSelectedTerm = null;
   beforeEditing = false;
@@ -215,10 +218,13 @@ function openEventDetail(eventId) {
   if (next) next.hidden = true;
 
   switchTab('compare');
+  // 처음 여는 사건은 STEP 1(내가 아는 역사)부터, 이미 탐구 전 문장을 남겼다면 STEP 2부터 보여줍니다.
+  exploreStep = flowStepDone('before') ? 2 : 1;
   renderBeforeCard();
-  renderFlowProgress();
+  applyExploreStep();
   renderKeywordChart(event);
   renderGlance();
+  renderCompareSummary(event);
   renderSourcesTab();
   resetGuide(event);
   rebuildDraftContext();
@@ -299,24 +305,40 @@ function switchTab(tabName) {
 
   // 지도는 보이는 상태에서 너비를 재야 하므로 탭을 열 때 다시 그립니다.
   if (tabName === 'memory') renderMemoryTab();
+
+  // 탭은 각 탐구 단계의 '자세히 보기'입니다. 탭을 열면 그 탭이 속한 단계로 표시합니다.
+  activeTab = tabName;
+  if (TAB_STEP[tabName]) {
+    exploreStep = TAB_STEP[tabName];
+    applyExploreStep();
+  }
 }
 
 /* ------------------------------------------------------------
-   권장 탐구 흐름 (진행 표시)
-   · 탭 이동을 막거나 잠그지 않습니다. "지금 어디쯤인지 / 다음에 무엇을 하면 되는지"만 보여줍니다.
-   · 공동 표현을 등록할 때 연구에 필요한 최소 milestone만 함께 저장합니다.
+   탐구 4단계 (STEP 1/4 ~ 4/4)
+   1 내가 알고 있는 역사 → 2 세 나라 기록·NLP 비교 → 3 새로운 관점과 나의 최종 표현 → 4 My Memory Card
+   · 단계 이동을 막거나 잠그지 않습니다. 진행 표시의 단계 버튼·탭으로 언제든 오갈 수 있습니다.
+   · 단계마다 화면 아래 주요 행동 버튼(step-cta)은 하나만 보입니다.
+   · 공동 표현을 등록할 때 연구에 필요한 최소 milestone만 함께 저장합니다 (기존과 같음).
    ------------------------------------------------------------ */
 
-const FLOW_STEPS = [
-  { id: 'select', label: '질문' },
-  { id: 'before', label: '처음 생각', hint: '아래에 지금 알고 있는 내용만으로 한 문장을 적어 주세요. 검색하거나 정답을 찾지 않아도 됩니다.' },
-  { id: 'compare', label: '서술 탐구', hint: '‘세 나라의 서술’을 차례로 읽고, ‘어떻게 다를까?’와 ‘사료로 확인’에서 차이와 근거를 살펴보세요.' },
-  { id: 'shared', label: '탐구 후 생각', hint: '‘내 한 문장 쓰기’에서 탐구한 뒤의 생각을 한 문장으로 적어 보세요.' },
-  { id: 'card', label: '나의 카드', hint: '‘My Memory Card 만들기’를 눌러 탐구 전·후 나의 생각을 카드로 받아 가세요.' }
+const EXPLORE_STEPS = [
+  { n: 1, id: 'before', short: '내가 아는 역사', title: '내가 알고 있는 역사 기록',
+    todo: '지금 알고 있는 내용만으로 이 역사를 한 문장으로 적어 보세요. 정답을 찾지 않아도 돼요.' },
+  { n: 2, id: 'compare', short: '세 나라 비교', title: '국가별 역사 서술 · NLP 비교',
+    todo: '세 나라의 기록을 읽고, 형광펜 표현과 공통점·차이점 카드를 살펴보세요.' },
+  { n: 3, id: 'shared', short: '나의 표현', title: '새로운 관점과 나의 최종 표현',
+    todo: '탐구하며 발견한 관점을 고르고, 이 역사를 기억하고 싶은 나의 한 문장을 써 보세요.' },
+  { n: 4, id: 'card', short: 'Memory Card', title: 'My Memory Card',
+    todo: '카드 내용을 확인하고 이미지로 저장하세요. 발견한 관점과 남은 질문은 아래에서 다듬을 수 있어요.' }
 ];
+/* 탭 → 탐구 단계 (탭은 각 단계의 '자세히 보기' 역할) */
+const TAB_STEP = { compare: 2, ai: 2, keywords: 2, sources: 2, shared: 3, memory: 3 };
 const COMPARE_DWELL_MS = 5000;        // 국가별 서술이 화면에 이만큼 보이면 "서술 확인"으로 기록
 
 let flow = null;
+let exploreStep = 1;                  // 사건 화면에서 지금 보고 있는 단계 (1~3)
+let activeTab = 'compare';
 
 function defaultFlow() {
   return { viewedCompare: false, viewedNlp: false, viewedSources: false, submitted: false, viewedResult: false, cardMade: false };
@@ -351,52 +373,105 @@ function flowStepDone(id) {
   return false;
 }
 
-function renderFlowProgress() {
-  const box = document.getElementById('flowProgress');
-  if (!box || !flow) return;
-  const current = FLOW_STEPS.find(s => !flowStepDone(s.id));
-  const items = FLOW_STEPS.map((step, i) => {
-    const done = flowStepDone(step.id);
-    const isCurrent = current && current.id === step.id;
-    const state = done ? '완료' : (isCurrent ? '지금 단계' : '');
+function stepperHtml(current) {
+  const info = EXPLORE_STEPS[current - 1];
+  const allDone = EXPLORE_STEPS.every(st => flowStepDone(st.id));
+  const items = EXPLORE_STEPS.map(st => {
+    const done = flowStepDone(st.id);
+    const isCurrent = st.n === current;
+    const state = [isCurrent ? '지금 단계' : '', done ? '완료' : ''].filter(Boolean).join(', ');
     return `
       <li class="flow-progress__step${done ? ' is-done' : ''}${isCurrent ? ' is-current' : ''}">
-        <button type="button" data-flow-step="${step.id}"${isCurrent ? ' aria-current="step"' : ''}>
-          <span class="flow-progress__num" aria-hidden="true">${done ? '✓' : i + 1}</span>
-          <span class="flow-progress__label">${step.label}</span>
-          ${state ? `<span class="sr-only"> — ${state}</span>` : ''}
+        <button type="button" data-step-goto="${st.n}"${isCurrent ? ' aria-current="step"' : ''}>
+          <span class="flow-progress__num" aria-hidden="true">${done && !isCurrent ? '✓' : st.n}</span>
+          <span class="flow-progress__label">${st.short}</span>
+          <span class="sr-only"> (STEP ${st.n}/4${state ? ' — ' + state : ''})</span>
         </button>
       </li>`;
   }).join('');
-  const next = current
-    ? `<span class="flow-progress__next-label">다음</span> ${current.hint}
-       <button type="button" class="before-card__link" data-flow-step="${current.id}">바로 가기</button>`
-    : '탐구를 모두 마쳤습니다. ‘모두의 기억 보기’에서 다른 사람들의 생각을 보거나, 다른 사건도 살펴보세요.';
-  box.innerHTML = `
-    <ol class="flow-progress__list">${items}</ol>
-    <p class="flow-progress__next">${next}</p>
-    <p class="flow-progress__newcomer">다른 학생이 이 기기로 이어서 참여하나요? <button type="button" class="before-card__link" data-new-participant>새 참여자로 시작</button></p>`;
+  const memoryNote = current === 3 && activeTab === 'memory'
+    ? '다른 참여자들이 남긴 기억을 둘러보고 있어요. 다 봤다면 아래 버튼으로 나의 카드를 만드세요.'
+    : info.todo;
+  return `
+    <div class="stepper">
+      <p class="stepper__count"><span class="stepper__num">STEP <strong>${current}</strong>/4</span> <span class="stepper__title">${info.title}</span></p>
+      <div class="stepper__bar" aria-hidden="true"><i style="width:${current * 25}%"></i></div>
+      <ol class="flow-progress__list">${items}</ol>
+      <p class="stepper__todo"><span class="stepper__todo-label">지금 할 일</span> ${allDone && current === 4 ? '탐구를 모두 마쳤습니다. 카드를 저장하고, 다른 사건도 살펴보세요.' : memoryNote}</p>
+    </div>`;
 }
 
-function gotoFlowStep(id) {
-  if (id === 'select') {
-    document.getElementById('detailHeader')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    return;
+function renderFlowProgress() {
+  const box = document.getElementById('flowProgress');
+  if (box && flow) {
+    box.innerHTML = `${stepperHtml(exploreStep)}
+      <p class="flow-progress__newcomer" data-newcomer-note${Store && Store.hasParticipantState() ? '' : ' hidden'}>다른 학생이 이 기기로 이어서 참여하나요? <button type="button" class="before-card__link" data-new-participant>새 참여자로 시작</button></p>`;
   }
-  if (id === 'before') {
-    const card = document.getElementById('beforeCard');
-    if (card && !getBefore() && isBeforeSkipped()) { beforeEditing = true; renderBeforeCard(); }
-    card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    setTimeout(() => document.getElementById('beforeInput')?.focus({ preventScroll: true }), 300);
-    return;
+  const cardBox = document.getElementById('cardProgress');
+  if (cardBox && flow) cardBox.innerHTML = stepperHtml(4);
+  renderStepCta();
+}
+
+/** 화면 아래 주요 행동 버튼: 지금 단계에 맞는 버튼 하나만 보여줍니다. */
+function renderStepCta() {
+  const bar = document.getElementById('stepCta');
+  if (!bar) return;
+  const inputMode = exploreStep === 1 && !!document.getElementById('beforeInput');
+  const key = exploreStep === 1 ? (inputMode ? '1' : '1-next') : String(exploreStep);
+  bar.querySelectorAll('[data-step-main]').forEach(b => { b.hidden = b.dataset.stepMain !== key; });
+  const label = bar.querySelector('[data-step-main="1"] .step-cta__label');
+  if (label) label.textContent = beforeSkipConfirm ? '적지 않고 세 나라 기록 보기' : '내 생각 저장하고 세 나라 기록 보기';
+  const back = bar.querySelector('[data-step-back]');
+  if (back) back.hidden = exploreStep === 1;
+  const stepLabel = document.getElementById('stepCtaStep');
+  if (stepLabel) stepLabel.textContent = `STEP ${exploreStep}/4 · ${EXPLORE_STEPS[exploreStep - 1].short}`;
+  // 미완료 입력 안내: 막지 않고, 왜 한 번 더 확인하는지 버튼 바로 위에서 알려줍니다.
+  const hint = document.getElementById('stepCtaHint');
+  if (hint) {
+    const msg = exploreStep === 1 && inputMode && beforeSkipConfirm
+      ? '아직 한 문장을 적지 않았어요. 한 단어만 적어도 괜찮아요. 그대로 넘어가려면 버튼을 한 번 더 누르세요.'
+      : '';
+    hint.textContent = msg;
+    hint.hidden = !msg;
   }
-  if (id === 'card') {
-    if (flow && flow.cardMade && cardState.model) { openCardPage(); return; }
-    gotoTab('shared');
-    setTimeout(() => document.getElementById('makeCardButton')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 200);
-    return;
+  const cardStatus = document.getElementById('cardStatus');
+  if (cardStatus) cardStatus.hidden = exploreStep !== 3 || !cardStatus.textContent;
+}
+
+/** 사건 화면의 단계 표시를 지금 상태(exploreStep)에 맞춥니다. */
+function applyExploreStep() {
+  const page = document.querySelector('.page--detail');
+  if (page) page.dataset.step = String(exploreStep);
+  if (exploreStep === 3) { renderStepDiscoveries(); renderAfterRecall(); }
+  renderFlowProgress();
+}
+
+/** 단계 이동 (진행 표시 버튼 · 이전 버튼 · 주요 행동 버튼). 이동을 막지 않습니다. */
+function gotoStep(n) {
+  n = Number(n);
+  if (n === 4) { makeMemoryCard(); return; }
+  if (!(n >= 1 && n <= 3)) return;
+  if (!document.querySelector('.page--detail.active')) { navigateTo('detail'); setRouteHash(currentEventId); }
+  if (n === 1) {
+    if (!getBefore() && isBeforeSkipped()) beforeEditing = true;
+    exploreStep = 1;
+    renderBeforeCard();
+    applyExploreStep();
+  } else if (n === 2) {
+    switchTab(TAB_STEP[activeTab] === 2 ? activeTab : 'compare');
+  } else {
+    switchTab(TAB_STEP[activeTab] === 3 ? activeTab : 'shared');
   }
-  gotoTab({ compare: 'compare', shared: 'shared', result: 'memory' }[id] || 'compare');
+  setCardStatus('');
+  scrollToStepTop();
+  if (n === 1) setTimeout(() => document.getElementById('beforeInput')?.focus({ preventScroll: true }), 350);
+}
+
+function scrollToStepTop() {
+  const target = document.getElementById('flowProgress');
+  if (!target) return;
+  const top = target.getBoundingClientRect().top + window.scrollY - 90;   // 상단 메뉴 높이만큼 여유
+  window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
 }
 
 /* 국가별 서술이 실제로 화면에 일정 시간 보였는지 확인합니다 (단순 탭 열기와 구분). */
@@ -511,6 +586,7 @@ function renderBeforeCard() {
       <span class="before-card__text">“${escapeHtml(saved)}”</span>
       <button type="button" class="before-card__link" data-before-action="edit">수정</button>
       ${renderPriorQuestion()}`;
+    renderStepCta();
     return;
   }
   if (!saved && isBeforeSubmitted() && !beforeEditing) {
@@ -519,6 +595,7 @@ function renderBeforeCard() {
       <span class="before-card__hint">탐구 전 문장은 제출과 함께 저장되었고, 이 기기에서는 지웠습니다.</span>
       <button type="button" class="before-card__link" data-new-participant>다른 학생이 이어서 참여한다면: 새 참여자로 시작</button>
       ${renderPriorQuestion()}`;
+    renderStepCta();
     return;
   }
   if (isBeforeSkipped() && !beforeEditing) {
@@ -527,6 +604,7 @@ function renderBeforeCard() {
       <span class="before-card__hint">서술을 읽기 전의 생각을 한 문장으로 남겨 두면, 나중에 내 한 문장과 비교해 생각의 변화를 볼 수 있어요.</span>
       <button type="button" class="before-card__link" data-before-action="edit">지금 적기</button>
       ${renderPriorQuestion()}`;
+    renderStepCta();
     return;
   }
   box.className = 'before-card';
@@ -535,19 +613,21 @@ function renderBeforeCard() {
          <button type="button" class="before-card__link" data-before-action="focus">지금 적기</button>
          <button type="button" class="before-card__link before-card__link--quiet" data-before-action="skip">그래도 건너뛰기</button></p>`
     : '';
+  // 저장 버튼은 화면 아래 고정 버튼(STEP 1의 주요 행동)입니다. 입력창에서 Enter를 눌러도 저장됩니다.
   box.innerHTML = `
     <div class="before-card__head">
-      <span class="before-card__label">먼저, 탐구 전 한 문장 <small>(1분)</small></span>
-      <p class="before-card__desc">먼저 지금 알고 있는 내용만으로 이 사건을 한 문장으로 적어 주세요.<br />검색하거나 정답을 찾지 않아도 됩니다. 잘 모르면 떠오르는 단어만 적어도 괜찮아요.</p>
+      <span class="before-card__label">STEP 1 · 내가 알고 있는 역사 <small>(1분)</small></span>
+      <label class="before-card__q" for="beforeInput">이 사건에 대해 <span class="hl-ink">지금 알고 있는 것</span>을 한 문장으로 적어 보세요.</label>
+      <p class="before-card__desc" id="beforeDesc">검색하거나 정답을 찾지 않아도 됩니다. 잘 모르면 떠오르는 단어만 적어도 괜찮아요.</p>
     </div>
     <div class="before-card__row">
-      <input type="text" id="beforeInput" class="shared-form__input" maxlength="500" value="${escapeAttr(saved)}" placeholder="예: 잘 모르지만, 일본과 조선이 싸운 전쟁" aria-label="탐구 전 한 문장" />
-      <button type="button" class="btn btn--small" data-before-action="save">저장하고 시작</button>
-      ${beforeSkipConfirm ? '' : '<button type="button" class="before-card__link before-card__link--quiet" data-before-action="skip">건너뛰기</button>'}
+      <input type="text" id="beforeInput" class="shared-form__input shared-form__input--lg" maxlength="500" value="${escapeAttr(saved)}" placeholder="예: 잘 모르지만, 일본과 조선이 싸운 전쟁" aria-describedby="beforeDesc" enterkeyhint="done" autocomplete="off" />
     </div>
     ${skipHtml}
-    <p class="before-card__note">이 브라우저에만 임시로 저장되며, 내 한 문장을 등록할 때 함께 저장되어 탐구 전·후 변화 분석에 쓰입니다.</p>
+    ${beforeSkipConfirm ? '' : '<p class="before-card__skip">적기 어렵다면 <button type="button" class="before-card__link before-card__link--quiet" data-before-action="skip">건너뛰기</button></p>'}
+    <p class="before-card__note">이 브라우저에만 임시로 저장되며, 나중에 쓰는 탐구 후 문장과 비교해 My Memory Card에 담깁니다. 공개 등록을 할 때만 함께 저장됩니다.</p>
     ${renderPriorQuestion()}`;
+  renderStepCta();
 }
 
 function handleBeforeAction(action) {
@@ -589,6 +669,8 @@ function handleBeforeAction(action) {
   renderBeforeCard();
   renderFlowProgress();
   updateDraftPanel();
+  // 저장(또는 확인 후 건너뛰기)이 끝나면 다음 단계로 자연스럽게 넘어갑니다.
+  if ((action === 'save' || action === 'skip') && !beforeSkipConfirm) gotoStep(2);
 }
 
 /* ------------------------------------------------------------
@@ -699,6 +781,88 @@ function renderGlance() {
         </div>` : ''}
     </div>
     <p class="nlp-meta glance__note">※ 위 단어는 실제 세 서술 텍스트에서 계산한 결과입니다. ①은 세 서술에 모두 나온 단어, ②는 한 서술에서 다른 두 서술보다 상대적으로 많이 쓰인 단어(특징적 표현)입니다. 숫자와 ‘과정·시기’ 같은 일반 명사는 이 요약에서만 뺐습니다.</p>`;
+}
+
+/* ------------------------------------------------------------
+   STEP 2 형광펜 · 공통점/차이점 카드
+   · 형광펜은 computeGlance(eventNlp) — 세 서술 텍스트에서 실제로 계산된 공통 표현·특징적 표현 — 에만 칠합니다.
+     위치도 NLP 모듈이 찾은 원문 위치(occurrences)만 씁니다. 미리 정해 둔 단어나 편집자 해석을 강조하지 않습니다.
+   ------------------------------------------------------------ */
+
+function narrativeTextHtml(countryKey, n) {
+  const g = computeGlance(eventNlp);
+  if (!g || !eventNlp || !eventNlp.occurrences || !eventNlp.texts) return n.text;   // 분석 모듈이 없으면 원래대로
+  const full = eventNlp.texts[countryKey] || '';
+  const offset = n.title && full.indexOf(n.text) > 0 ? full.indexOf(n.text) : 0;
+  if (full.slice(offset, offset + n.text.length) !== n.text) return n.text;           // 위치를 맞출 수 없으면 강조하지 않음
+  // 선택적 강조: 서술별 특징적 표현 상위 2개 · 공통 표현 상위 2개, 각각 본문의 첫 등장 위치에만 칠합니다.
+  const spans = [];
+  const add = (term, kind) => {
+    const first = (eventNlp.occurrences(term)[countryKey] || []).find(([a, b]) => a >= offset && b <= offset + n.text.length);
+    if (first) spans.push([first[0] - offset, first[1] - offset, kind, term]);
+  };
+  g.distinct[countryKey].slice(0, 2).forEach(t => add(t, 'distinct'));
+  g.common.slice(0, 2).forEach(t => add(t, 'common'));
+  spans.sort((x, y) => x[0] - y[0]);
+  let html = '';
+  let pos = 0;
+  spans.forEach(([a, b, kind, term]) => {
+    if (a < pos) return;
+    const what = kind === 'common' ? '세 서술 공통 표현' : `${nlpCountryName(countryKey)} 측 서술의 두드러진 표현`;
+    html += escapeHtml(n.text.slice(pos, a)) +
+      `<mark class="hl hl--${kind}" title="${escapeAttr(`${what}: ${term} (NLP 계산)`)}">${escapeHtml(n.text.slice(a, b))}<span class="sr-only"> (${what})</span></mark>`;
+    pos = b;
+  });
+  return html + escapeHtml(n.text.slice(pos));
+}
+
+function renderCompareSummary(event) {
+  const box = document.getElementById('compareSummary');
+  const legend = document.getElementById('hlLegend');
+  if (!box) return;
+  const g = computeGlance(eventNlp);
+  const marked = !!document.querySelector('#narrativesGrid mark.hl');
+  if (legend) {
+    legend.hidden = !marked;
+    legend.innerHTML = marked ? `
+      <span class="hl-legend__item"><mark class="hl hl--common">공통 표현</mark> 세 서술에 모두 나온 단어</span>
+      <span class="hl-legend__item"><mark class="hl hl--distinct">두드러진 표현</mark> 이 서술에서 상대적으로 많이 쓰인 단어</span>
+      <span class="hl-legend__note">형광펜은 세 서술 텍스트에서 자동 계산(NLP)된 단어에만 표시되며, 중요도나 옳고 그름을 뜻하지 않습니다.</span>` : '';
+  }
+  const names = [
+    { key: 'korea', flag: '韓', name: '한국', title: event.title },
+    { key: 'japan', flag: '日', name: '일본', title: event.titleJP },
+    { key: 'china', flag: '中', name: '중국', title: event.titleCN }
+  ].filter(x => x.title);
+  const chips = (list, country) => list.length
+    ? list.map(t => `<button type="button" class="nlp-chip${country ? ` nlp-chip--${country}` : ''}" data-glance-term="${escapeAttr(t)}" title="세 서술에서 쓰인 위치 보기">${escapeHtml(t)}</button>`).join('')
+    : '<span class="nlp-meta">뚜렷한 표현 없음</span>';
+  const namesCard = new Set(names.map(x => x.title)).size >= 2 ? `
+    <article class="sum-card sum-card--names">
+      <h4 class="sum-card__title"><span class="sum-card__kicker">사건 이름</span>같은 사건, 서로 다른 이름</h4>
+      <ul class="sum-card__names">${names.map(x => `<li><span class="sum-card__flag sum-card__flag--${x.key}" aria-hidden="true">${x.flag}</span><span class="sr-only">${x.name}: </span><strong>${escapeHtml(x.title)}</strong></li>`).join('')}</ul>
+    </article>` : '';
+  if (!g) {
+    box.innerHTML = namesCard ? `<div class="compare-sum__grid">${namesCard}</div>` : '';
+    return;
+  }
+  box.innerHTML = `
+    <div class="compare-sum__head">
+      <h3 class="compare-sum__title">한눈에 보는 공통점과 차이점</h3>
+      <p class="compare-sum__note">아래 단어는 세 서술 텍스트에서 NLP로 계산한 결과입니다 (편집자 해석 아님). 단어를 누르면 원문 위치와 근거를 보여줘요.</p>
+    </div>
+    <div class="compare-sum__grid">
+      ${namesCard}
+      <article class="sum-card sum-card--common">
+        <h4 class="sum-card__title"><span class="sum-card__kicker">공통점</span>세 서술이 함께 쓰는 말</h4>
+        <div class="nlp-chips">${chips(g.common, null)}</div>
+      </article>
+      ${NLP_COUNTRIES.map(c => `
+        <article class="sum-card sum-card--${c.key}">
+          <h4 class="sum-card__title"><span class="sum-card__kicker">차이점 · ${c.flag} ${c.name} 측</span>이 서술이 두드러지게 쓰는 말</h4>
+          <div class="nlp-chips">${chips(g.distinct[c.key], c.key)}</div>
+        </article>`).join('')}
+    </div>`;
 }
 
 /* 내 한 문장 쓰기 탭: 사료를 아직 보지 않았다면 짧게 권합니다 (필수 아님) */
@@ -1685,7 +1849,7 @@ async function submitSharedNarrative() {
   const reason = reasonInput ? reasonInput.value.trim() : '';
 
   if (!text) {
-    setSubmitStatus('STEP 3의 공동 표현 문장을 입력해 주세요.', 'error');
+    setSubmitStatus('‘② 나의 최종 표현’ 칸에 공개할 문장을 입력해 주세요.', 'error');
     narrativeInput?.focus();
     return;
   }
@@ -1807,8 +1971,8 @@ async function submitSharedNarrative() {
   renderNewcomerNotes();
 
   setSubmitStatus(result.legacy
-    ? '공동 표현이 등록되었습니다. (일부 항목은 데이터베이스 확장 후 함께 저장됩니다) 위의 ‘My Memory Card 만들기’로 카드도 받을 수 있어요.'
-    : '공동 표현이 등록되었습니다. 이제 다른 참여자들의 표현과 함께 볼 수 있어요. 위의 ‘My Memory Card 만들기’로 카드도 받을 수 있어요.', 'ok');
+    ? '공동 표현이 등록되었습니다. (일부 항목은 데이터베이스 확장 후 함께 저장됩니다) 화면 아래 ‘My Memory Card 만들기’로 카드도 받을 수 있어요.'
+    : '공동 표현이 등록되었습니다. 이제 다른 참여자들의 표현과 함께 볼 수 있어요. 화면 아래 ‘My Memory Card 만들기’로 카드도 받을 수 있어요.', 'ok');
 
   if (eventIdAtSubmit === currentEventId) {
     markFlow({ submitted: true, viewedResult: false });
@@ -2709,6 +2873,10 @@ function resetCardState() {
   cardState.before = '';
   cardState.after = '';
   ['customDiscovery', 'myQuestion'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  // STEP 3에서 바로 고를 수 있도록 발견 후보는 사건을 열 때 만들어 둡니다 (모두 사건 데이터·NLP 결과에서 옴).
+  const event = currentEvent();
+  if (Card && event) cardState.options = Card.discoveryOptions(event, eventNlp);
+  renderStepDiscoveries();
   const card = document.getElementById('memoryCard');
   if (card) card.innerHTML = '';
   setCardStatus('');
@@ -2720,7 +2888,8 @@ function setCardStatus(message, tone) {
   const el = document.getElementById('cardStatus');
   if (!el) return;
   el.textContent = message || '';
-  el.className = 'shared-form__status' + (tone ? ` is-${tone}` : '');
+  el.className = 'shared-form__status step-cta__hint' + (tone ? ` is-${tone}` : '');
+  el.hidden = !message;
 }
 
 function setCardActionStatus(message) {
@@ -2744,8 +2913,12 @@ function makeMemoryCard() {
   if (!event || !Card) { setCardStatus('카드 모듈을 불러오지 못했습니다.', 'error'); return; }
   const sent = cardSentences();
   if (!sent.after) {
-    setCardStatus('먼저 위의 STEP 3에 탐구 후 나의 한 문장을 적어 주세요. 한 문장이면 충분해요.', 'error');
-    document.getElementById('userNarrative')?.focus();
+    // STEP 3 화면이 아니면 먼저 그 단계로 옮긴 뒤, 무엇이 비었는지 버튼 바로 위에서 알려줍니다.
+    if (document.querySelector('.page--detail.active') && exploreStep !== 3) gotoStep(3);
+    setCardStatus('먼저 ‘② 나의 최종 표현’ 칸에 탐구 후 나의 한 문장을 적어 주세요. 한 문장이면 충분해요.', 'error');
+    const area = document.getElementById('userNarrative');
+    area?.focus({ preventScroll: true });
+    area?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
   if (Guide.findPlaceholderIssues) {
@@ -2766,6 +2939,7 @@ function makeMemoryCard() {
 function openCardPage() {
   renderDiscoveryOptions();
   renderCardPreview();
+  renderFlowProgress();
   navigateTo('card');
   setRouteHash(currentEventId);
   setTimeout(() => document.getElementById('memoryCard')?.focus({ preventScroll: true }), 300);
@@ -2811,7 +2985,34 @@ function toggleDiscovery(id) {
   if (k >= 0) cardState.picked.splice(k, 1);
   else if (cardState.picked.length + (cardState.custom ? 1 : 0) < Card.MAX_DISCOVERIES) cardState.picked.push(id);
   renderDiscoveryOptions();
-  renderCardPreview();
+  renderStepDiscoveries();
+  if (document.querySelector('.page--card.active')) renderCardPreview();
+}
+
+/* STEP 3: 새롭게 발견한 관점 고르기 — 카드 화면의 '카드 다듬기'와 같은 선택(cardState.picked)을 씁니다. */
+function renderStepDiscoveries() {
+  const box = document.getElementById('discoveryStep');
+  if (!box || !Card) return;
+  if (!cardState.options.length) {
+    box.innerHTML = '<p class="card-builder__desc">이 사건에서 고를 수 있는 항목이 없습니다. 카드 화면에서 직접 적을 수 있어요.</p>';
+    return;
+  }
+  const full = cardState.picked.length + (cardState.custom ? 1 : 0) >= Card.MAX_DISCOVERIES;
+  box.innerHTML = cardState.options.map(o => {
+    const on = cardState.picked.indexOf(o.id) >= 0;
+    return `<button type="button" class="guide-chip guide-chip--lg${on ? ' is-selected' : ''}" aria-pressed="${on}" data-discovery-step="${escapeAttr(o.id)}" title="${escapeAttr(o.text)}"${!on && full ? ' disabled' : ''}>${on ? '<span aria-hidden="true">✓ </span>' : ''}${escapeHtml(o.chip)}</button>`;
+  }).join('');
+}
+
+/* STEP 3: 탐구 전 나의 생각 다시 보기 (이 창·이 기기 안의 값만) */
+function renderAfterRecall() {
+  const box = document.getElementById('afterRecall');
+  if (!box) return;
+  const before = getBefore() || ((cardMemo[currentEventId] || {}).before || '');
+  box.hidden = !before;
+  box.innerHTML = before
+    ? `<span class="after-recall__label">STEP 1 · 탐구 전 나의 생각</span><span class="after-recall__text">“${escapeHtml(before)}”</span>`
+    : '';
 }
 
 function renderCardPreview() {
@@ -3070,9 +3271,9 @@ function startExploration() {
 let eventsMode = 'participate';
 const EVENTS_COPY = {
   participate: {
-    eyebrow: 'STEP 02',
-    title: '어떤 역사에 대한 생각을 남겨볼까요?',
-    desc: '하나를 선택해주세요.<br />세 나라의 표현을 살펴본 뒤 당신의 생각을 한 문장으로 남길 수 있습니다.'
+    eyebrow: '탐구할 역사 고르기',
+    title: '어떤 역사를 탐구해 볼까요?',
+    desc: '하나를 고르면 STEP 1부터 바로 시작합니다.<br />처음이라면 ‘먼저 살펴보기’ 표시가 있는 사건을 권해요.'
   },
   memory: {
     eyebrow: 'SHARED MEMORY',
@@ -3325,13 +3526,21 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('.page--card')?.addEventListener('click', e => {
     const action = e.target.closest('[data-card-action]');
     if (action) { handleCardAction(action.dataset.cardAction); return; }
+    const stepGoto = e.target.closest('[data-step-goto]');
+    if (stepGoto) {
+      if (stepGoto.dataset.stepGoto === '4') return;          // 지금 보고 있는 단계
+      navigateTo('detail');
+      setRouteHash(currentEventId);
+      gotoStep(stepGoto.dataset.stepGoto);
+      return;
+    }
     const chip = e.target.closest('[data-discovery]');
     if (chip) toggleDiscovery(chip.dataset.discovery);
   });
   document.getElementById('customDiscovery')?.addEventListener('input', e => {
     cardState.custom = e.target.value;
     clearTimeout(cardDraftTimer);
-    cardDraftTimer = setTimeout(() => { renderDiscoveryOptions(); renderCardPreview(); }, 200);
+    cardDraftTimer = setTimeout(() => { renderDiscoveryOptions(); renderStepDiscoveries(); renderCardPreview(); }, 200);
   });
   document.getElementById('myQuestion')?.addEventListener('input', e => {
     cardState.question = e.target.value;
@@ -3418,8 +3627,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const prior = e.target.closest('[data-prior-value]');
     if (prior) { handlePriorAnswer(prior.dataset.priorValue); return; }
     if (e.target.closest('[data-prior-action="edit"]')) { priorEditing = true; renderBeforeCard(); return; }
-    const flowStep = e.target.closest('[data-flow-step]');
-    if (flowStep) { gotoFlowStep(flowStep.dataset.flowStep); return; }
+    const stepGoto = e.target.closest('[data-step-goto]');
+    if (stepGoto) { gotoStep(stepGoto.dataset.stepGoto); return; }
+    if (e.target.closest('[data-step-back]')) { gotoStep(exploreStep - 1); return; }
+    const discovery = e.target.closest('[data-discovery-step]');
+    if (discovery) { toggleDiscovery(discovery.dataset.discoveryStep); return; }
     const ageFilter = e.target.closest('[data-age-filter]');
     if (ageFilter) { setMemoryAgeFilter(ageFilter.dataset.ageFilter); return; }
   });
@@ -3461,6 +3673,27 @@ document.addEventListener('DOMContentLoaded', () => {
     if (translate) { toggleTranslation(translate.dataset.translateId); return; }
     if (e.target.closest('[data-shared-more]')) { sharedVisibleCount += 20; renderSharedList(); }
   });
+
+  // 휴대폰 키보드가 열려도 화면 아래 주요 버튼이 가려지지 않도록, 보이는 화면(visualViewport) 바닥에 맞춥니다.
+  // (Android Chrome은 viewport의 interactive-widget=resizes-content로, iOS Safari는 아래 계산으로 처리)
+  if (window.visualViewport) {
+    const vv = window.visualViewport;
+    const placeCta = () => {
+      const covered = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      document.documentElement.style.setProperty('--kb-offset', `${Math.round(covered)}px`);
+    };
+    vv.addEventListener('resize', placeCta);
+    vv.addEventListener('scroll', placeCta);
+    placeCta();
+  }
+  // 안내 문구가 붙어 버튼 영역이 높아져도 입력창·내용을 가리지 않도록 실제 높이를 스크롤 여백에 반영합니다.
+  const ctaBar = document.getElementById('stepCta');
+  if (ctaBar && 'ResizeObserver' in window) {
+    new ResizeObserver(() => {
+      const h = ctaBar.offsetHeight;
+      if (h > 0) document.documentElement.style.setProperty('--cta-h', `${h}px`);
+    }).observe(ctaBar);
+  }
 
   // 화면 너비가 바뀌면 지도를 다시 그립니다 (모바일 회전 등)
   let resizeTimer = null;

@@ -175,5 +175,8 @@ test('index.html: QR·카드 스크립트를 같은 주소에서 script.js보다
   // 공개 등록은 별도 동의 체크와 함께, 카드 만들기와 분리되어 있다
   assert.match(html, /id="publishConsent"/);
   assert.match(html, /id="makeCardButton"/);
-  assert.ok(html.indexOf('id="makeCardButton"') < html.indexOf('id="submitNarrative"'));
+  // 카드 만들기는 STEP 3의 주요 행동(화면 아래 고정 버튼)이고, 공개 등록 영역(publishBox) 밖에 있다
+  const pub = html.slice(html.indexOf('id="publishBox"'), html.indexOf('id="submitNarrative"'));
+  assert.ok(pub.length > 0 && !pub.includes('makeCardButton'));
+  assert.match(html, /data-step-main="3" id="makeCardButton"/);
 });
