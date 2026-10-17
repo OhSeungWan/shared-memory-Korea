@@ -17,7 +17,7 @@
   --bg-card: #ffffff;        /* 카드 배경 */
   --ink: #1a1a1a;            /* 먹색 (본문) */
   --ink-soft: #4a4a4a;       /* 옅은 먹색 */
-  --ink-mute: #8a8580;       /* 회색 */
+  --ink-mute: #6e6963;       /* 회색 (작은 글씨도 한지 배경 대비 4.8:1 — WCAG AA) */
   --line: #d8d2c4;           /* 구분선 */
 
   /* 국가별 포인트 컬러 (각국 전통색에서 영감) */
@@ -2671,4 +2671,525 @@ body.has-participant-gate { overflow: hidden; }
   .page--qr .page__header { margin-bottom: 6mm; }
   .qr-grid { grid-template-columns: repeat(2, 1fr); gap: 6mm; }
   .qr-card { border-color: #999; }
+}
+
+
+/* ============================================================
+   21. 4단계 탐구 경험 · 첫 화면 개편 (2026-10 UX)
+   · 한지 베이지·먹색·accent·국가별 색은 그대로 쓰고, 형광펜 색 하나만 추가합니다.
+   · 목표: 화면을 연 지 3초 안에 "핵심 질문"과 "다음 행동(버튼 하나)"이 보이게.
+   · 모션은 짧은 등장 효과만, 움직임 줄이기 설정을 존중합니다.
+   ============================================================ */
+
+:root {
+  --hl-yellow: rgba(238, 200, 92, 0.5);    /* 형광펜: 공통 · 제목 강조 */
+  --hl-rose: rgba(200, 54, 75, 0.17);      /* 형광펜: 서술별 두드러진 표현 */
+  --cta-h: 5.6rem;                         /* 화면 아래 고정 버튼 영역 높이 */
+  --kb-offset: 0px;                        /* iOS 키보드가 가린 높이 (script.js) */
+  --shadow-paper: 0 1px 0 rgba(26, 26, 26, 0.04), 0 18px 40px -18px rgba(60, 40, 20, 0.35), 0 6px 14px -8px rgba(60, 40, 20, 0.18);
+}
+
+/* 고정 상단 메뉴·하단 버튼에 가리지 않도록 스크롤 여백 */
+html { scroll-padding-top: 6rem; scroll-padding-bottom: calc(var(--cta-h) + 1rem); }
+
+/* 모든 주요 버튼이 늦게 나타나던 등장 효과(0.8초 지연)는 첫 화면 시작 버튼에만 짧게 남깁니다. */
+.btn--primary { animation: none; }
+
+/* 키보드 사용자용 초점 표시 */
+.btn:focus-visible, .tab:focus-visible, .flow-progress__step button:focus-visible, .step-cta__back:focus-visible,
+.guide-chip:focus-visible, .deeper__link:focus-visible, .more-box__summary:focus-visible, .nlp-chip:focus-visible,
+.before-card__link:focus-visible, .narrative-card__more summary:focus-visible, .narrative-card__basis summary:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.shared-form__input:focus-visible, .shared-form__textarea:focus-visible { box-shadow: 0 0 0 3px rgba(139, 58, 58, 0.18); }
+
+/* ---------- 21-1. 형광펜 ---------- */
+.hl-ink {
+  background: linear-gradient(transparent 58%, var(--hl-yellow) 58%, var(--hl-yellow) 92%, transparent 92%);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  padding: 0 0.08em;
+}
+mark.hl {
+  color: inherit;
+  background: linear-gradient(transparent 52%, var(--hl-yellow) 52%, var(--hl-yellow) 94%, transparent 94%);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  padding: 0 0.04em;
+  border-radius: 1px;
+}
+mark.hl--distinct {
+  background: linear-gradient(transparent 52%, var(--hl-rose) 52%, var(--hl-rose) 94%, transparent 94%);
+  font-weight: 600;                      /* 색만으로 구분하지 않도록 굵기도 다르게 */
+}
+.hl-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.2rem;
+  font-size: 0.84rem;
+  color: var(--ink-soft);
+  margin: 0 0 1.1rem;
+}
+.hl-legend__item mark { margin-right: 0.3rem; }
+.hl-legend__note { flex-basis: 100%; font-size: 0.78rem; color: var(--ink-mute); }
+
+/* ---------- 21-2. 첫 화면 (Hero) ---------- */
+.hero--v2 {
+  display: block;
+  min-height: 0;
+  padding: 3.5rem 0 2.5rem;
+  overflow: hidden;                   /* 장식 지도·기울인 카드가 가로 스크롤을 만들지 않도록 */
+  overflow: clip;
+}
+.page--home .intro { margin-top: var(--space-lg); }
+.hero--v2 .hero__map { opacity: 0.35; right: -8%; top: 42%; }
+.hero__grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+  gap: 3rem;
+  align-items: center;
+}
+.hero--v2 .hero__content { max-width: 660px; }
+.hero--v2 .hero__eyebrow { letter-spacing: 0.35em; font-size: 1rem; margin-bottom: 1.2rem; animation-duration: 0.4s; }
+.hero--v2 .hero__title {
+  font-size: clamp(2.7rem, 7.2vw, 5.4rem);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  margin-bottom: 1.4rem;
+}
+.hero--v2 .hero__title-line { animation-duration: 0.5s; }
+.hero--v2 .hero__title-line:nth-child(1) { animation-delay: 0.05s; }
+.hero--v2 .hero__title-line:nth-child(2) { animation-delay: 0.15s; }
+.hero__title-sub {
+  display: block;
+  margin-top: 0.9rem;
+  font-size: clamp(1.25rem, 2.6vw, 1.8rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--ink-soft);
+  animation: slideUp 0.5s ease 0.25s both;
+}
+.hero--v2 .hero__subtitle {
+  font-size: clamp(1rem, 1.6vw, 1.15rem);
+  max-width: 34em;
+  margin-bottom: 1.8rem;
+  animation: slideUp 0.5s ease 0.3s both;
+}
+.hero--v2 .hero__subtitle strong { color: var(--ink); font-weight: 700; }
+.btn--hero {
+  min-height: 60px;
+  padding: 1.05rem 2.2rem;
+  font-size: 1.12rem;
+  font-weight: 700;
+  border-radius: 999px;
+  box-shadow: 0 10px 24px -10px rgba(26, 26, 26, 0.55);
+  animation: slideUp 0.45s ease 0.35s both;
+}
+.hero--v2 .hero__meta { animation: slideUp 0.45s ease 0.4s both; }
+
+/* 완성 카드 미리보기 (예시) */
+.hero-card {
+  position: relative;
+  justify-self: center;
+  width: 100%;
+  max-width: 330px;
+  margin: 0;
+  animation: cardIn 0.6s ease 0.35s both;
+}
+.hero-card__stack { position: relative; }
+.hero-card__stack::before {           /* 뒤에 겹친 종이 한 장 — 레이어 느낌 */
+  content: '';
+  position: absolute;
+  inset: 10px -10px -10px 10px;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  transform: rotate(4deg);
+  box-shadow: var(--shadow-sm);
+}
+.hero-card__paper {
+  position: relative;
+  background: #fffdf8;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1.5rem 1.4rem 1.2rem;
+  transform: rotate(-2.5deg);
+  box-shadow: var(--shadow-paper);
+  overflow: hidden;
+}
+.hero-card__paper .memory-card__band { height: 5px; }
+.hero-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  color: var(--ink-mute);
+}
+.hero-card__tag {
+  font-family: 'Noto Sans KR', sans-serif;
+  letter-spacing: 0.02em;
+  font-size: 0.72rem;
+  color: var(--accent);
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 0 0.55rem;
+}
+.hero-card__event { display: flex; justify-content: space-between; align-items: center; margin: 0.7rem 0 0.8rem; }
+.hero-card__event small { display: block; font-family: 'Cormorant Garamond', serif; color: var(--accent); font-size: 0.85rem; letter-spacing: 0.08em; }
+.hero-card__event strong { font-family: 'Noto Serif KR', serif; font-weight: 900; font-size: 1.55rem; line-height: 1.2; }
+.hero-card__seal {
+  width: 42px; height: 42px;
+  display: grid; place-items: center;
+  font-family: 'Noto Serif KR', serif; font-weight: 900; font-size: 1.3rem;
+  color: #fff; background: var(--accent);
+  border-radius: 3px; transform: rotate(4deg);
+}
+.hero-card__label { font-size: 0.7rem; letter-spacing: 0.06em; color: var(--ink-mute); margin-top: 0.3rem; }
+.hero-card__quote { font-family: 'Noto Serif KR', serif; font-size: 0.98rem; line-height: 1.55; color: var(--ink); font-weight: 700; }
+.hero-card__quote--before { font-weight: 400; color: var(--ink-soft); font-size: 0.9rem; }
+.hero-card__arrow { color: var(--accent); line-height: 1; margin: 0.25rem 0; font-size: 0.9rem; }
+.hero-card__stamps { list-style: none; display: flex; gap: 0.4rem; margin-top: 0.9rem; padding-top: 0.7rem; border-top: 1px dashed var(--line); }
+.hero-card__stamps li { font-size: 0.7rem; color: var(--accent); border: 1px solid rgba(139, 58, 58, 0.45); border-radius: 999px; padding: 0.05rem 0.55rem; }
+.hero-card__caption { text-align: center; font-size: 0.86rem; color: var(--ink-soft); margin-top: 1.4rem; position: relative; }
+.hero-card__caption small { color: var(--ink-mute); }
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(16px) rotate(2deg); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 탐구 4단계 띠 */
+.hero__steps--v2 {
+  position: relative;
+  z-index: 1;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: 2.6rem;
+  padding-top: 1.1rem;
+  animation: slideUp 0.5s ease 0.5s both;
+}
+.hero__steps--v2 li { align-items: center; gap: 0.5rem; }
+.hero__steps--v2 strong { font-size: 0.95rem; }
+.hero__steps--v2 li + li::before { content: '→'; color: var(--ink-mute); margin-right: 0.3rem; font-size: 0.85rem; }
+
+/* ---------- 21-3. 진행 표시 (STEP n/4) ---------- */
+.stepper { margin-bottom: 0.4rem; }
+.stepper__count { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.7rem; margin-bottom: 0.55rem; }
+.stepper__num {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+}
+.stepper__num strong { font-size: 1.45rem; }
+.stepper__title { font-family: 'Noto Serif KR', serif; font-weight: 700; font-size: 1.02rem; color: var(--ink); }
+.stepper__bar { height: 4px; background: var(--line); border-radius: 999px; overflow: hidden; margin-bottom: 0.7rem; }
+.stepper__bar i { display: block; height: 100%; background: var(--accent); border-radius: inherit; transition: width 0.35s ease; }
+.stepper .flow-progress__list { margin-bottom: 0.5rem; }
+.stepper__todo { font-size: 0.92rem; color: var(--ink-soft); line-height: 1.6; }
+.stepper__todo-label {
+  display: inline-block;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--bg-soft);
+  background: var(--accent);
+  border-radius: 3px;
+  padding: 0 0.4rem;
+  margin-right: 0.35rem;
+  vertical-align: 1px;
+}
+.flow-progress__step button { min-height: 44px; }
+.flow-progress__step.is-current .flow-progress__num { background: var(--accent); color: #fff; border-color: var(--accent); }
+.page--card .flow-progress { margin-bottom: 1.4rem; }
+
+/* ---------- 21-4. 사건 화면: 핵심 질문을 크게 ---------- */
+.page--detail .detail__header { margin-bottom: 1.8rem; padding-bottom: 1.4rem; }
+.page--detail .detail__title { font-size: clamp(1.9rem, 4.5vw, 2.6rem); margin-bottom: 0.4rem; }
+.page--detail .detail__question {
+  font-size: clamp(1.25rem, 3.4vw, 1.6rem);
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: -0.02em;
+  border-left-width: 4px;
+  margin: 0.8rem 0 0.9rem;
+}
+.page--detail .detail__desc { font-size: 0.98rem; }
+/* STEP 1: 사건 설명 없이 '오늘의 질문'과 입력에 집중 (설명은 STEP 2에서 보여줌)
+   STEP 2·3: 단계 머리말(step-head)이 핵심 질문이 되므로 사건 머리말은 이름만 작게 */
+.page--detail[data-step="1"] .detail__desc { display: none; }
+.page--detail[data-step="3"] .detail__desc,
+.page--detail[data-step="2"] .detail__question,
+.page--detail[data-step="3"] .detail__question { display: none; }
+.page--detail[data-step="2"] .detail__header,
+.page--detail[data-step="3"] .detail__header { margin-bottom: 1rem; padding-bottom: 0.9rem; }
+.page--detail[data-step="2"] .detail__title,
+.page--detail[data-step="3"] .detail__title { font-size: clamp(1.4rem, 3.4vw, 1.8rem); margin-bottom: 0.2rem; }
+.page--detail[data-step="2"] .detail__era,
+.page--detail[data-step="3"] .detail__era { margin-bottom: 0; font-size: 0.9rem; }
+/* '지금 할 일'은 단계 머리말·STEP 1 카드가 대신 말하므로 사건 화면에서는 숨기고 카드 화면에서만 보여줌 */
+.page--detail .stepper__todo { display: none; }
+.page--detail .back-btn { margin-bottom: 0.8rem; }
+
+/* 단계별 보이기: STEP 1은 '내가 아는 역사'에만 집중 (탭·서술은 다음 단계에서) */
+.page--detail[data-step="1"] .tabs,
+.page--detail[data-step="1"] .tab-content { display: none !important; }
+.page--detail[data-step="2"] #beforeCard,
+.page--detail[data-step="3"] #beforeCard { display: none; }
+
+/* 하단 고정 버튼 영역만큼 여백 */
+.page--detail { padding-bottom: calc(var(--space-lg) + var(--cta-h)); }
+
+/* STEP 1 카드 */
+.page--detail .before-card {
+  margin: 0 0 2rem;
+  padding: 1.6rem 1.6rem 1.3rem;
+  border-left-width: 4px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+.page--detail .before-card.is-saved,
+.page--detail .before-card.is-collapsed { padding: 1rem 1.4rem; box-shadow: none; }
+.before-card__label { color: var(--accent); font-family: 'Noto Sans KR', sans-serif; font-size: 0.82rem; letter-spacing: 0.06em; }
+.before-card__q {
+  display: block;
+  font-family: 'Noto Serif KR', serif;
+  font-weight: 700;
+  font-size: clamp(1.3rem, 3.6vw, 1.65rem);
+  line-height: 1.45;
+  letter-spacing: -0.02em;
+  margin: 0.35rem 0 0.4rem;
+  color: var(--ink);
+}
+.shared-form__input--lg { font-size: 1.08rem; padding: 1rem 1.1rem; min-height: 56px; background: #fff; }
+.before-card__skip { font-size: 0.84rem; color: var(--ink-mute); margin-top: 0.6rem; }
+
+/* 단계 머리말 (STEP 2·3 핵심 질문) */
+.step-head { margin: 0.4rem 0 1.4rem; }
+.step-head__kicker { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 0.3rem; }
+.step-head__q { font-size: clamp(1.4rem, 3.8vw, 2rem); line-height: 1.35; letter-spacing: -0.025em; margin-bottom: 0.5rem; }
+.step-head__desc { color: var(--ink-soft); font-size: 0.98rem; max-width: 46em; }
+
+/* ---------- 21-5. STEP 2: 서술 카드 · 공통점/차이점 ---------- */
+.narrative-card { box-shadow: var(--shadow-sm); }
+.narrative-card__text { font-size: 1.02rem; line-height: 1.95; }
+.narrative-card__more { margin-top: 0.4rem; border-top: 1px solid var(--line); padding-top: 0.6rem; }
+.narrative-card__more summary { cursor: pointer; font-size: 0.85rem; color: var(--ink-soft); min-height: 40px; display: flex; align-items: center; }
+.narrative-card__more summary:hover { color: var(--accent); }
+.narrative-card__more[open] summary { margin-bottom: 0.4rem; }
+
+.compare-sum { margin: 0 0 2rem; }
+.compare-sum__head { margin-bottom: 1rem; }
+.compare-sum__title { font-size: clamp(1.25rem, 3vw, 1.55rem); margin-bottom: 0.3rem; }
+.compare-sum__note { font-size: 0.84rem; color: var(--ink-mute); }
+.compare-sum__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; }
+.sum-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--ink);
+  border-radius: var(--radius-lg);
+  padding: 1.1rem 1.2rem 1.2rem;
+  box-shadow: var(--shadow-sm);
+}
+.sum-card--common { border-top-color: #c9a63a; background: linear-gradient(180deg, rgba(238, 200, 92, 0.12), transparent 60%), var(--bg-card); }
+.sum-card--korea { border-top-color: var(--korea); }
+.sum-card--japan { border-top-color: var(--japan); }
+.sum-card--china { border-top-color: var(--china); }
+.sum-card--names { border-top-color: var(--accent); }
+.sum-card__title { font-size: 1.05rem; line-height: 1.4; margin-bottom: 0.7rem; }
+.sum-card__kicker { display: block; font-family: 'Noto Sans KR', sans-serif; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.05em; color: var(--ink-mute); margin-bottom: 0.15rem; }
+.sum-card__names { list-style: none; display: grid; gap: 0.45rem; }
+.sum-card__names li { display: flex; align-items: center; gap: 0.55rem; font-family: 'Noto Serif KR', serif; overflow-wrap: anywhere; }
+.sum-card__flag { flex: none; width: 26px; height: 26px; display: grid; place-items: center; font-size: 0.8rem; font-weight: 700; color: #fff; border-radius: 3px; }
+.sum-card__flag--korea { background: var(--korea); }
+.sum-card__flag--japan { background: var(--japan); }
+.sum-card__flag--china { background: #a87c0b; }   /* 금색 위 흰 글자 대비 확보 */
+.sum-card .nlp-chip { min-height: 36px; }
+
+/* 접어 둔 자세히 보기 */
+.more-box { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--bg-soft); margin: 0 0 1.4rem; padding: 0 1.2rem; }
+.more-box[open] { padding-bottom: 1.1rem; }
+.more-box__summary {
+  cursor: pointer;
+  list-style: none;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.6rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+.more-box__summary::-webkit-details-marker { display: none; }
+.more-box__summary::after { content: '＋'; margin-left: auto; color: var(--accent); font-weight: 400; }
+.more-box[open] > .more-box__summary::after { content: '－'; }
+.more-box__summary small { font-weight: 400; color: var(--ink-mute); font-size: 0.8rem; }
+.more-box--inline { margin: 0.6rem 0 0.8rem; background: transparent; }
+.more-box.timeline { margin-top: 0; }
+
+.deeper { margin: 0.4rem 0 1rem; }
+.deeper__label { font-size: 0.86rem; color: var(--ink-mute); margin-bottom: 0.5rem; }
+.deeper__links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; }
+.deeper__link {
+  text-align: left;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.75rem 0.9rem;
+  min-height: 56px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.deeper__link:hover { border-color: var(--accent); transform: translateY(-1px); }
+.deeper__link strong { display: block; font-size: 0.92rem; }
+.deeper__link span { font-size: 0.78rem; color: var(--ink-mute); }
+
+/* ---------- 21-6. STEP 3: 나의 최종 표현 ---------- */
+.after-recall {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.7rem;
+  align-items: baseline;
+  background: var(--bg-soft);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.2rem;
+}
+.after-recall__label { font-size: 0.76rem; font-weight: 700; color: var(--ink-mute); letter-spacing: 0.04em; }
+.after-recall__text { font-family: 'Noto Serif KR', serif; color: var(--ink-soft); overflow-wrap: anywhere; }
+.core-step { margin-bottom: 1.4rem; }
+.core-step__label { display: block; font-family: 'Noto Serif KR', serif; font-weight: 700; font-size: 1.08rem; margin-bottom: 0.35rem; }
+.core-step__num { color: var(--accent); margin-right: 0.2rem; }
+.core-step--main {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-lg);
+  padding: 1.2rem 1.2rem 1rem;
+  box-shadow: var(--shadow-md);
+}
+.shared-form__textarea--main { font-size: 1.05rem; line-height: 1.7; background: #fff; min-height: 7.5rem; }
+.guide-chip--lg { min-height: 44px; padding: 0.5rem 0.9rem; font-size: 0.9rem; text-align: left; }
+.finish-box__card { border-left-width: 4px; }
+
+/* ---------- 21-7. 화면 아래 고정 주요 버튼 (단계마다 하나) ---------- */
+.step-cta {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 90;
+  transform: translateY(calc(-1 * var(--kb-offset)));
+  background: rgba(250, 247, 239, 0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -8px 24px -16px rgba(26, 26, 26, 0.35);
+  padding: 0.7rem 1rem calc(0.7rem + env(safe-area-inset-bottom, 0px));
+}
+.step-cta__inner { max-width: 760px; margin: 0 auto; }
+.step-cta__hint { font-size: 0.86rem; line-height: 1.5; color: var(--ink-soft); margin: 0 0 0.5rem; }
+.step-cta__hint.is-error { color: var(--korea); font-weight: 500; }
+.step-cta__hint[hidden], .step-cta__hint:empty { display: none; }
+.step-cta__row { display: flex; align-items: flex-end; gap: 0.6rem; }
+.step-cta__back {
+  flex: none;
+  min-height: 52px;
+  min-width: 64px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+}
+.step-cta__back:hover { color: var(--accent); border-color: var(--accent); }
+.step-cta__main-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.25rem; }
+.step-cta__step { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; color: var(--accent); text-align: center; }
+.step-cta__main {
+  width: 100%;
+  min-height: 52px;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 1.02rem;
+  font-weight: 700;
+  padding: 0.8rem 1.2rem;
+  text-align: center;
+  line-height: 1.35;
+}
+.step-cta__main[hidden] { display: none; }
+.step-cta__main:hover { transform: none; }
+
+/* ---------- 21-8. 카드 화면 (STEP 4) ---------- */
+.page__header--left { text-align: left; }
+.card-actions--more { margin-top: -0.3rem; }
+.card-actions .btn--primary { font-weight: 700; }
+.btn--ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.btn--ghost:hover { background: var(--bg-card); color: var(--accent); border-color: var(--accent); }
+.page__header--left .page__desc { margin: 0; }
+
+/* ---------- 21-9. 반응형 ---------- */
+@media (max-width: 900px) {
+  .hero__grid { grid-template-columns: 1fr; gap: 2.2rem; }
+  .hero-card { max-width: 300px; }
+}
+
+@media (max-width: 640px) {
+  .page--home { padding-top: 0.5rem; }
+  .hero--v2 { padding: 1.6rem 0 1rem; }
+  .hero--v2 .hero__map { width: 90%; right: -30%; top: 30%; opacity: 0.22; }
+  .hero--v2 .hero__eyebrow { font-size: 0.85rem; margin-bottom: 0.8rem; }
+  .hero--v2 .hero__title { margin-bottom: 1rem; }
+  .hero__title-sub { margin-top: 0.6rem; }
+  .hero--v2 .hero__subtitle { margin-bottom: 1.3rem; line-height: 1.7; }
+  .hero--v2 .hero__cta { align-items: stretch; gap: 0.6rem; }
+  .btn--hero { width: 100%; justify-content: center; }
+  .hero--v2 .hero__meta { justify-content: center; }
+  .hero-card { max-width: 270px; }
+  .hero-card__paper { padding: 1.2rem 1.1rem 1rem; }
+  .hero__steps--v2 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem 0.8rem; margin-top: 2rem; }
+  .hero__steps--v2 li + li::before { display: none; }
+
+  .page--detail .before-card { padding: 1.1rem 1rem 0.9rem; margin-bottom: 1.4rem; }
+  .page--detail, .page--card { padding-top: 0.9rem; }
+  .page--detail .back-btn, .page--card .back-btn { margin-bottom: 0.3rem; min-height: 40px; }
+  .page--detail .detail__header { margin-bottom: 1rem; padding-bottom: 1rem; }
+  .page--detail .detail__title { font-size: 1.8rem; margin-bottom: 0.1rem; }
+  .page--detail .detail__question { margin: 0.5rem 0 0.2rem; }
+  .stepper__bar { margin-bottom: 0.45rem; }
+  .flow-progress__step button { min-height: 44px; }
+  .stepper__title { font-size: 0.95rem; }
+  .compare-sum__grid { grid-template-columns: 1fr; }
+  .deeper__links { grid-template-columns: 1fr; }
+  .core-step--main { padding: 1rem 0.9rem 0.8rem; }
+  .more-box { padding: 0 0.9rem; }
+  .step-cta { padding: 0.55rem 0.75rem calc(0.55rem + env(safe-area-inset-bottom, 0px)); }
+  .step-cta__main { font-size: 0.98rem; padding: 0.75rem 0.9rem; }
+  .step-cta__back { min-width: 56px; padding: 0 0.7rem; }
+
+  /* 카드 화면: '이미지로 저장'을 화면 아래에 붙여 둡니다 (보조 버튼은 카드 아래 일반 위치) */
+  .card-actions:not(.card-actions--more) {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    background: rgba(245, 241, 232, 0.95);
+    padding: 0.6rem 0 calc(0.6rem + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--line);
+  }
+  .card-actions .btn--primary { flex: 1 1 100%; justify-content: center; min-height: 52px; font-size: 1.02rem; font-weight: 700; border-radius: 999px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-delay: 0s !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+
+@media print {
+  .step-cta, #cardProgress { display: none !important; }
 }

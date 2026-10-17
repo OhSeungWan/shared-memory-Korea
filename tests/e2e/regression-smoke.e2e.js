@@ -39,6 +39,7 @@ run('regression-smoke', async ({ browser, base, check, mockPage, presetContinue 
 
   // 국가별 서술 · TF-IDF · 유사도 · 근거 · 사료
   await page.evaluate(() => openEventDetail('imjin'));
+  await page.click('#flowProgress [data-step-goto="2"]');   // STEP 1을 건너뛰고 STEP 2로 (이동은 막지 않음)
   await page.click('.tab[data-tab="ai"]');
   check('한눈에 비교 표시', (await page.$$eval('#aiGlance [data-glance-term]', els => els.length)) > 3);
   await page.click('#aiAnalyzeBtn');
