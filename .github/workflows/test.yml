@@ -102,7 +102,8 @@ jobs:
           node --version
           npm --version
           npx playwright --version
-          node -e "const b=require('playwright-core/browsers.json').browsers.find(x=>x.name==='chromium');console.log('chromium revision', b.revision, 'version', b.browserVersion)"
+          # playwright-core는 package exports로 하위 경로 require를 막으므로 설치된 파일을 직접 읽습니다.
+          node -e "const b=JSON.parse(require('fs').readFileSync('node_modules/playwright-core/browsers.json','utf8')).browsers.find(x=>x.name==='chromium');console.log('chromium revision', b.revision, 'version', b.browserVersion)"
 
       - name: Block production Supabase host (테스트가 운영 DB에 닿지 않도록)
         shell: bash
