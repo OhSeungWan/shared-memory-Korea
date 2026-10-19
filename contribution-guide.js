@@ -179,8 +179,23 @@
 
   const NICKNAME_MESSAGE = '닉네임에 연락처·학교명·학년/반처럼 개인을 알아볼 수 있는 정보가 있는 것 같아요. 닉네임은 다른 참여자에게 공개되므로 별명으로 바꾸거나 비워 두세요.';
 
+  /**
+   * 공개 문장·이유 확인 — 공개 게시물에 링크·이메일·전화번호(광고·개인정보)가 실리지 않도록 막습니다.
+   * 전화번호는 0으로 시작하는 번호만 봅니다 — 연도(1592, 1945 1952 등)는 걸리지 않습니다.
+   */
+  function checkPublicText(text) {
+    const s = typeof text === 'string' ? text : '';
+    if (/https?:\/\/|www\.|\b[a-z0-9-]+\.(?:com|net|org|kr|jp|cn|io|me|ly|xyz)\b/i.test(s)) return { ok: false, reason: 'link' };
+    if (/\S+@\S+\.\S+/.test(s)) return { ok: false, reason: 'email' };
+    if (/(?<!\d)0\d{1,2}[-.\s]?\d{3,4}[-.\s]?\d{4}(?!\d)/.test(s)) return { ok: false, reason: 'phone' };
+    return { ok: true };
+  }
+
+  const PUBLIC_TEXT_MESSAGE = '공개되는 문장·이유에는 링크·이메일·전화번호를 넣을 수 없어요. 개인정보나 광고가 함께 공개되지 않도록 지운 뒤 등록해 주세요.';
+
   return {
     STYLES, TEMPLATES, REASONS, BLANK,
+    checkPublicText, PUBLIC_TEXT_MESSAGE,
     findPlaceholderIssues, placeholderMessage,
     TERM_RULES, checkHistoricalTerms,
     checkNickname, NICKNAME_MESSAGE
