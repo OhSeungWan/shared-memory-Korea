@@ -3368,3 +3368,25 @@ mark.hl--distinct {
 .gap-table-wrap { border-radius: var(--radius-lg); border-color: var(--line); }
 .gap-table thead th { background: var(--accent-soft); color: var(--ink); }
 .gap-table tr.gap-group th { background: var(--bg-main); }
+
+/* 한국어 줄바꿈: 단어 중간에서 끊지 않음 (일본어·중국어는 띄어쓰기가 없으므로 기본 규칙 유지) */
+body { word-break: keep-all; overflow-wrap: break-word; }
+[lang="ja"], [lang^="zh"] { word-break: normal; }
+
+/* 휴대폰 첫 화면 정리 (2026-10): 사건 고르기 화면 톤 유지, 장식·무게만 덜어냄 */
+@media (max-width: 640px) {
+  .hero--v2 .hero__map { display: none; }               /* 문단 뒤로 비치던 지도 조각 */
+  .hero--v2 { padding: 2.4rem 0 2rem; }
+  .hero--v2 .hero__eyebrow { letter-spacing: 0.25em; font-size: 0.82rem; margin-bottom: 1rem; }
+  .hero--v2 .hero__title { font-size: 2.6rem; line-height: 1.15; margin-bottom: 1.2rem; }
+  .hero__title-sub { font-size: 1.15rem; margin-top: 0.6rem; }
+  .hero-names { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; margin-bottom: 1.2rem; }
+  .hero-names__item { justify-content: flex-start; padding: 0.45rem 0.8rem; font-size: 0.9rem; }
+  .hero-names__item span { white-space: nowrap; }
+  .hero--v2 .hero__subtitle { font-size: 0.98rem; line-height: 1.75; margin-bottom: 1.4rem; }
+  .hero__subtitle-more { display: none; }
+  .btn--hero { border-radius: var(--radius-lg); box-shadow: none; min-height: 54px; font-size: 1.02rem; }
+  .hero-card__stack::before { display: none; }          /* 겹친 종이 */
+  .hero-card__paper { transform: none; }                /* 기울임 */
+  .hero-card { max-width: 320px; }
+}
