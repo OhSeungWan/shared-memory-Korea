@@ -384,15 +384,30 @@ GitHub Pages: 저장소 Settings → Pages → Branch `main` / root 로 배포.
 
 ## 12. 테스트
 
-```bash
-npm test          # = node --test tests/*.test.js  (Node 18 이상)
+**환경**: Node.js 22 LTS (CI와 같은 버전, 18 이상이면 단위 테스트는 동작) · 테스트 의존성은 `package-lock.json`으로 고정 (`playwright` 1.56.1 → Chromium 141, 리비전 1194)
 
-# 브라우저 E2E (Playwright + Chromium 필요, 실제 DB 접속 없음 — npm test에는 포함되지 않음)
-npm run test:e2e  # tests/e2e/*.e2e.js 전체 실행 후 요약
+```bash
+npm ci                                   # 테스트 의존성 설치 (lockfile 그대로, 사이트 실행에는 필요 없음)
+npm test                                 # 단위 테스트 = node --test tests/*.test.js
+
+npx playwright install --with-deps chromium   # 브라우저 E2E용 Chromium (처음 한 번)
+npm run test:e2e                         # tests/e2e/*.e2e.js 전체 실행 후 요약
 # 종료 코드: 0 = 브라우저에서 실제로 실행되어 통과 / 1 = 실패(확인 항목 0개 포함) / 2 = 실행하지 못함(SKIPPED)
 # 각 결과에 Playwright·Chromium 버전과 실행 시각이 출력됩니다. Playwright가 없으면 SKIPPED이며 통과가 아닙니다.
-# 설치: npm i -D playwright && npx playwright install --with-deps chromium  (또는 PLAYWRIGHT_MODULE, CHROMIUM_PATH 지정)
+# 다른 경로의 Playwright·브라우저를 쓰려면 PLAYWRIGHT_MODULE, CHROMIUM_PATH 환경 변수로 지정
 ```
+
+### GitHub Actions (자동 테스트) — `.github/workflows/test.yml`
+
+| 항목 | 내용 |
+|---|---|
+| 실행 조건 | 모든 Pull Request, `main` 브랜치 push, Actions 탭의 수동 실행(workflow_dispatch) |
+| 작업 | `Unit tests` — `npm ci` → `npm test` (실행된 테스트가 0개면 실패) / `Browser E2E` — `npm ci` → Chromium 설치 → `npm run test:e2e` (실제 Chromium, 가짜 Supabase) |
+| 실패 처리 | 테스트 실패·확인 항목 0개·E2E를 실행하지 못함(SKIPPED) 모두 워크플로 실패. `E2E_ALLOW_SKIP`은 사용하지 않습니다 |
+| 권한·보안 | `permissions: contents: read`만 사용, 비밀 키·운영 DB 인증 정보 없음. 공식 actions는 커밋 SHA로 고정. E2E 작업은 러너의 hosts 파일에서 운영 Supabase 주소를 막아, 테스트가 실수로 운영 DB에 요청해도 연결되지 않게 합니다 |
+| 결과 확인 | PR 아래 Checks 또는 Actions 탭 → 실행 → 요약(Summary)에 단위 테스트 수와 E2E 요약 표(PASS/FAIL/SKIPPED, 통과 수, Chromium 버전). 자세한 로그는 아티팩트 `unit-test-log`, `e2e-log`(14일 보관)에서 내려받아 `FAIL` 줄과 바로 앞의 확인 항목을 찾으면 됩니다 |
+
+**가짜 DB(Mock Supabase) 테스트의 한계**: E2E는 `tests/e2e/mock-supabase.js`나 가로챈 HTTP 응답을 쓰므로 RLS 정책, 컬럼 단위 권한, CHECK 제약, RPC의 실제 SQL(소표본 가림 등)은 브라우저 테스트로 검증되지 않습니다. 이 부분은 단위 테스트의 SQL 파일 검사(`tests/prefinal-stabilization.test.js`)와 운영 반영 시 수동 확인으로 보완합니다. 실제 휴대폰·교실 네트워크 환경도 CI에서 재현되지 않습니다.
 
 - `tests/nlp-analyzer.test.js` — 국가별 서술 분석 (기존)
 - `tests/generation-analysis.test.js` — age_group 없는 기존 데이터 호환·연령대 필터·prior_learning null·소수 표본 숨김·completed_flow·전체 필터 = 기존 분석 결과·단계적 저장(하위 호환)·비공개 참여자 연결
@@ -403,6 +418,7 @@ npm run test:e2e  # tests/e2e/*.e2e.js 전체 실행 후 요약
 - `tests/memory-card.test.js` — 사건 링크 해석(형식·없는 사건·이상한 값)·사건별 역사적 질문·카드 모델(입력 그대로·없는 항목 비움·도장=실제 기록·발견 최대 3개·길이 제한)·글자 크기 단계·탐구 전/후는 실제 차이만·발견 후보가 NLP 결과에서 옴·줄바꿈·QR 라이브러리 해시·스크립트 순서·공개 동의 분리
 - `tests/e2e/memory-card.e2e.js` — 휴대폰 QR 링크 진입, 탐구 전/후 기록 정확성(특수문자), 공개 없이 카드(서버 0건·저장소 없음), 발견·질문, PNG 저장(크기), 인쇄 화면, 동의 없이 공개 불가, 공개 후 카드·도장, 새 참여자 초기화, 잘못된 링크, 1000자 문장, QR 시트 6개
 - `tests/vendor-supabase.test.js` — vendor 파일 버전 고정·해시·라이선스, index.html에 외부 CDN 스크립트 없음, 비밀 키 없음, 실제 vendor 라이브러리 + shared-store로 조회·등록·공감·집계 RPC 요청 형식(가짜 HTTP), 네트워크 실패 시 안내 문구
+- `tests/ci-workflow.test.js` — CI 실행 조건(PR·main push), 최소 권한·비밀 값 미사용, `npm ci`·`npm test`·`npm run test:e2e` 실행, 테스트 0개·SKIPPED 성공 처리 금지, 공식 actions SHA 고정, Playwright 정확한 버전·lockfile 일치, node_modules 제외
 
 ## 13. 향후 발전 방향
 
