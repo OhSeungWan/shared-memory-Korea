@@ -93,19 +93,26 @@
           <!-- 메인 카피 -->
           <p class="hero__eyebrow">記憶 · 기억 · 记忆</p>
           <h1 class="hero__title">
-            <span class="hero__title-line">같은 역사,</span>
-            <span class="hero__title-line"><span class="hl-ink">다른 기억.</span></span>
-            <span class="hero__title-sub">당신은 어떻게 기억하나요?</span>
+            <span class="hero__title-line">같은 전쟁,</span>
+            <span class="hero__title-line"><span class="hl-ink">세 개의 이름.</span></span>
+            <span class="hero__title-sub">그리고 AI는 뭐라고 부를까요?</span>
           </h1>
+          <!-- 1592년 전쟁의 대표적인 이름 (한 나라 안에서도 여러 이름이 함께 쓰입니다) -->
+          <ul class="hero-names" aria-label="1592년 전쟁을 부르는 이름">
+            <li class="hero-names__item hero-names__item--korea"><small>한국</small><span lang="ko">임진왜란</span></li>
+            <li class="hero-names__item hero-names__item--japan"><small>일본</small><span lang="ja">文禄・慶長の役</span></li>
+            <li class="hero-names__item hero-names__item--china"><small>중국</small><span lang="zh-Hans">万历朝鲜战争</span></li>
+            <li class="hero-names__item hero-names__item--ai"><small>AI</small><span>?</span></li>
+          </ul>
           <p class="hero__subtitle">
-            한·중·일 세 나라가 같은 사건을 어떻게 다르게 기록했는지 비교하고,
-            나의 생각을 담은 <strong>My Memory Card</strong>를 받아 가세요.
+            세 나라의 서술과 AI의 답을 나란히 읽고, 이 역사를 기억하는 <strong>다섯 번째 서술자</strong>가 되어 보세요.
+            <span class="hero__subtitle-more">마지막에는 나의 생각이 담긴 <strong>My Memory Card</strong>를 받아 갑니다.</span>
           </p>
 
           <!-- 참여 버튼: 연령대(선택)를 고른 뒤 역사 선택으로 이동 -->
           <div class="hero__cta">
             <button class="btn btn--primary btn--hero" id="startButton" type="button" aria-controls="agePicker" aria-expanded="false">
-              <span>5분 탐구 시작하기</span>
+              <span>다섯 번째 서술자 되어 보기</span>
               <svg width="22" height="22" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                 <path d="M4 10h12m0 0l-4-4m4 4l-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -590,8 +597,10 @@
           <p>서술에 쓰인 핵심 표현(침략·구원·외국인·특별영주자 등)을 당대 기록이나 법령 문장에서 직접 확인할 수 있는 자료를 골랐습니다. 사료는 정답이 아니라 누군가 특정 위치에서 남긴 기록이므로, 카드마다 작성 주체·1차/후대 편찬 구분·관점과 한계를 함께 적었습니다. 예를 들어 『명사』는 전쟁 약 150년 뒤 청 조정이 편찬한 자료입니다.</p></details>
         <details class="faq__item"><summary>AI(NLP)가 역사적으로 옳고 그름을 판단하나요?</summary>
           <p>아닙니다. 분석은 단어가 몇 번, 어느 서술에 쓰였는지를 계산해 표현 선택의 경향을 보여줄 뿐입니다. 어떤 서술이나 참여자의 문장이 옳다고 판정하거나 점수를 매기지 않습니다.</p></details>
-        <details class="faq__item"><summary>왜 대형 언어 모델(LLM)을 쓰지 않았나요?</summary>
-          <p>계산 과정을 학생과 교사가 직접 확인할 수 있어야 하기 때문입니다. TF-IDF·코사인 유사도는 결과가 어느 단어에서 나왔는지 하나하나 보여줄 수 있고, 같은 입력이면 항상 같은 결과가 나옵니다. 또한 외부 API 키를 브라우저에 노출하지 않고, 참여 문장을 외부 AI 서비스로 보내지 않습니다.</p></details>
+        <details class="faq__item"><summary>AI(대형 언어 모델)는 어디에 쓰나요? 분석이나 판정에도 쓰나요?</summary>
+          <p>분석과 판정에는 쓰지 않습니다. 세 나라 서술 비교와 참여 문장 분석은 TF-IDF·코사인 유사도·개념 사전으로 계산하므로, 결과가 어느 단어에서 나왔는지 하나하나 보여줄 수 있고 같은 입력이면 항상 같은 결과가 나옵니다.
+            AI는 ‘네 번째 서술자’로만 등장합니다. 같은 질문을 한국어·일본어·중국어로 AI(Claude)에게 물은 답을 모델 이름·날짜와 함께 기록해 두고, 학생이 세 나라의 서술처럼 비판적으로 읽어 보게 합니다.
+            사이트는 실시간으로 AI를 부르지 않으며, API 키를 브라우저에 두지 않고, 참여 문장을 외부 AI 서비스로 보내지 않습니다.</p></details>
         <details class="faq__item"><summary>분석 결과가 미리 정해진(하드코딩된) 값은 아닌가요?</summary>
           <p>아닙니다. 모든 수치는 화면에 보이는 서술 텍스트와 저장된 참여 문장에서 매번 계산됩니다. 서술 문장을 바꾸면 결과도 바뀌며, 이를 자동 테스트로 확인합니다. 사람이 쓴 해석(편집자 해설)은 자동 분석과 구분해 따로 표시합니다.</p></details>
         <details class="faq__item"><summary>학생 데이터는 어떻게 보호하나요?</summary>
