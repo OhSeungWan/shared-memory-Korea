@@ -327,7 +327,7 @@ QR코드로 들어와 약 5분 동안 한 사건을 탐구하고, **자신의 �
 
 **하위 호환**: 기존 `ko`/`ja`/`en` 행은 그대로, 기존 `unknown`(및 `ETC`) 행은 `unknown`으로 유지합니다. 한자만 있는 기존 `unknown` 행을 `zh`로 다시 분류하지 않으며, 그 토큰화 방식도 이전과 같습니다. 개선된 언어 판별·선택은 새로 등록되는 제안부터 적용됩니다.
 
-### 본선 전 하드닝 — [`supabase/2026-10-prefinal-hardening.sql`](supabase/2026-10-prefinal-hardening.sql) (1단계, 적용 완료) · [`supabase/2026-10-after-deploy-hide-age-column.sql`](supabase/2026-10-after-deploy-hide-age-column.sql) (2단계, 배포 후)
+### 본선 전 하드닝 — [`supabase/2026-10-prefinal-hardening.sql`](supabase/2026-10-prefinal-hardening.sql) (1단계, 적용 완료) · [`supabase/2026-10-after-deploy-hide-age-column.sql`](supabase/2026-10-after-deploy-hide-age-column.sql) (2단계, 적용 완료 2026-10-10)
 
 | 대상 | 내용 |
 |---|---|
@@ -335,7 +335,7 @@ QR코드로 들어와 약 5분 동안 한 사건을 탐구하고, **자신의 �
 | CHECK 제약 | `event_key ∈ {imjin, zainichi, culture, tribute, modern, hiroshima}`, 작성 언어, 공백뿐인 내용 금지, `reason_tags` 허용 코드, 선택 요소 총 길이. 기존 NOT VALID 제약까지 **모두 VALIDATE**(기존 10건 모두 통과) |
 | RPC | `participation_summary`·`empathy_counts`·`age_group_participants`·`public_expressions` 모두 `SECURITY DEFINER` + `search_path = ''` + 객체 전체 경로 + `REVOKE ALL FROM PUBLIC, anon, authenticated` 후 **anon에만 EXECUTE**. 동적 SQL 없음 |
 | 소표본 보호 | `age_group_participants`: 5명 미만인 실제 연령대는 `participants = null`. 새 함수 `public_expressions(event_key, limit)`: 5명 미만 연령대의 `age_group`을 null로 가리고 `age_group_suppressed = true`. 화면은 “5명 미만”으로만 표시 |
-| 2단계(배포 후) | 테이블에서 `age_group` 직접 조회를 막는 컬럼 단위 SELECT 권한. **새 `shared-store.js`가 배포된 뒤 실행**해야 합니다(이전 버전 사이트는 `select('*')`를 쓰기 때문) |
+| 2단계(적용 완료) | 테이블에서 `age_group` 직접 조회를 막는 컬럼 단위 SELECT 권한. 새 `shared-store.js` 배포 뒤에 적용했습니다(이전 버전 사이트는 `select('*')`를 썼기 때문) |
 
 > ⚠ 사건을 새로 추가하면 `shared_expressions_event_key_chk`의 목록도 함께 바꿔야 저장됩니다. 테이블에 컬럼을 추가하면 공개 여부를 판단한 뒤 2단계 SQL의 `grant select (...)`와 `public_expressions` 반환 목록에 추가하세요.
 
@@ -371,7 +371,9 @@ memory-map.js               공동 기억 지도 SVG
 shared-store.js             Supabase 읽기·쓰기 (하위 호환)
 script.js                   화면 렌더링·이벤트 처리
 supabase/*.sql              DB 확장 SQL
-tests/*.test.js             Node 테스트
+tests/*.test.js             Node 단위 테스트
+tests/e2e/                  브라우저 E2E (Playwright · 가짜 Supabase)
+.github/workflows/test.yml  GitHub Actions 자동 테스트
 ```
 
 ### 외부 라이브러리 (Supabase JS)
@@ -446,7 +448,7 @@ npm run test:e2e                         # tests/e2e/*.e2e.js 전체 실행 후 
 
 ## 13. 향후 발전 방향
 
-- 검토 전 사료 13건 검증, `partial` 자료의 세부 원문 링크(선조실록 개별 기사, 징비록 원문 제공처) 확인
+- 검토 전 사료 14건 검증, `partial` 자료의 세부 원문 링크(선조실록 개별 기사, 징비록 원문 제공처) 확인
 - 임진왜란 일본 측·재일조선인 중국/국제 관점 대조 자료 보강 (관련성이 확인되는 경우에만)
 - 서버(Supabase Edge Function)에서 다국어 문장 임베딩을 계산해 저장하고, 브라우저는 결과만 읽는 방식의 의미 유사도
 - 한국어·중국어 형태소 분석기(서버 측) 도입, 개념 사전 확장 (중국어 표현은 원어민 검토 권장)

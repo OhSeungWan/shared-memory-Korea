@@ -1377,19 +1377,13 @@ function renderKeywordChart(event) {
   const chart = document.getElementById('keywordsChart');
   if (!chart) return;
 
-  let rows = [];
-  let manual = false;
-  if (event.keywordGroups && Analyzer) {
-    rows = Analyzer.keywordGroupCounts(event).map(g => ({
+  const rows = (event.keywordGroups && Analyzer)
+    ? Analyzer.keywordGroupCounts(event).map(g => ({
       label: g.label,
       counts: g.counts,
       sub: `묶음: ${g.forms.join(' · ')}`
-    }));
-  } else if (event.keywordFreq) {
-    // 예전 형식(사람이 입력한 숫자)이 남아 있는 경우 — 수동 입력값임을 표시합니다.
-    manual = true;
-    rows = Object.entries(event.keywordFreq).map(([label, counts]) => ({ label, counts, sub: '수동 입력값' }));
-  }
+    }))
+    : [];
 
   if (!rows.length) {
     chart.innerHTML = '<div class="shared-empty">이 사건에는 비교할 키워드 묶음이 아직 없습니다.</div>';
@@ -1403,7 +1397,7 @@ function renderKeywordChart(event) {
           <div class="keyword-bar__track">
             <div class="keyword-bar__fill keyword-bar__fill--${key}" data-width="${Math.round(value / max * 100)}"></div>
           </div>
-          <div class="keyword-bar__value">${value}${manual ? '' : '회'}</div>
+          <div class="keyword-bar__value">${value}회</div>
         </div>`;
 
   chart.innerHTML = rows.map(r => `
