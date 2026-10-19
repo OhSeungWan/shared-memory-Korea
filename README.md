@@ -175,6 +175,21 @@ QR코드로 들어와 약 5분 동안 한 사건을 탐구하고, **자신의 �
 | 지금 동작 | AI 기록이 없어도 세 나라 요약만으로 계산됩니다. 예) 히로시마: 일본 측 요약에 ‘조선인 피해자’ 없음 / 임진왜란: 일본 측 요약에 ‘침략’ 없음 |
 | 편집 데이터 | `keyGaps`(핵심 빈자리 1~2개, 계산과 맞을 때만 강조) · `observations`(편집자 관찰, 판정이 아닌 사실형 문장) |
 
+**AI 답변 수집** (`tools/collect-ai-narratives.mjs`, Anthropic Claude API · 모델 `claude-opus-5-5`)
+
+```bash
+npm ci                                              # SDK(@anthropic-ai/sdk, 고정 버전) 설치 — 사이트 실행에는 필요 없음
+npm run collect:ai -- --dry-run                     # 무엇을 몇 번 물을지 미리 보기 (API 호출 없음)
+npm run collect:ai -- --events=imjin,hiroshima      # 임진왜란·히로시마부터
+npm run collect:ai                                  # 전체 6개 사건 × 3개 언어 × 3회 (+ 일본어·중국어 참고 번역)
+npm test                                            # 기록 형식 확인 (질문 원문 일치 등)
+```
+
+- API 키는 환경 변수 `ANTHROPIC_API_KEY`로만 읽습니다. 코드·파일·채팅에 붙여 넣지 마세요.
+- 매번 새 대화, 시스템 프롬프트 없음, 모델 기본 설정. 이미 기록된 (사건, 언어, 회차)는 건너뛰고, 한 건마다 바로 저장하므로 중간에 멈춰도 같은 명령으로 이어서 실행합니다.
+- 안전 분류기가 거절하면 서버 측 대체 모델(`fallbacks: "default"`)이 답할 수 있으며, 그 경우 기록과 화면에 대체 모델이 답했다고 표시합니다. 끝까지 거절되거나 답이 끊긴 경우는 기록하지 않고 알려 줍니다.
+- 질문 버전(`questionsVersion`)이 바뀌면 이전 기록과 섞지 않도록 멈춥니다.
+
 **한계**: 사전에 없는 표현·비유는 찾지 못하고 부정문도 언급으로 셉니다. 빈자리는 “덜 언급했다”는 관찰이며 왜곡이나 의도를 뜻하지 않습니다. AI 기록은 특정 날짜·모델의 관찰이므로 ‘AI 전체’를 대표하지 않습니다.
 
 ## 4. 기술 스택
@@ -401,6 +416,7 @@ generation-analysis.js      연령대 필터·세대별 비교·소수 표본 �
 fourth-narrator-data.js     네 번째 서술자 편집 데이터: AI 질문 원문(3개 언어)·사건 명칭·사건별 확인 요소·핵심 빈자리·편집자 관찰
 ai-narratives-data.js       AI 답변 기록 (수집 스크립트가 채움, 손으로 고치지 않음)
 narrator-analysis.js        네 번째 서술자·기억의 빈자리 계산 (DOM 없음, Node 테스트 가능)
+tools/collect-ai-narratives.mjs  AI 답변 수집 스크립트 (Anthropic API, 로컬·클라우드 환경에서 실행)
 memory-map.js               공동 기억 지도 SVG
 shared-store.js             Supabase 읽기·쓰기 (하위 호환)
 script.js                   화면 렌더링·이벤트 처리

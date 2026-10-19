@@ -132,3 +132,20 @@ test('같은 입력이면 같은 결과 (결정적)', () => {
   const b = NA.analyzeEvent(byId('modern'), [], data);
   assert.deepEqual(JSON.parse(JSON.stringify(a)), JSON.parse(JSON.stringify(b)));
 });
+
+test('수집 스크립트 미리 보기: API를 부르지 않고 계획만 출력한다', () => {
+  const { spawnSync } = require('node:child_process');
+  const path = require('node:path');
+  const script = path.join(__dirname, '..', 'tools', 'collect-ai-narratives.mjs');
+  const env = Object.assign({}, process.env, { ANTHROPIC_API_KEY: '' });
+  const all = spawnSync(process.execPath, [script, '--dry-run'], { encoding: 'utf8', env });
+  assert.equal(all.status, 0, all.stderr);
+  const expected = 6 * 3 * 3 - aiData.records.length;
+  assert.match(all.stdout, new RegExp(`새로 물을 답변 ${expected}건`));
+  const part = spawnSync(process.execPath, [script, '--dry-run', '--events=imjin', '--langs=ja', '--runs=2'], { encoding: 'utf8', env });
+  assert.equal(part.status, 0, part.stderr);
+  const already = aiData.records.filter(r => r.eventId === 'imjin' && r.lang === 'ja' && r.run <= 2).length;
+  assert.match(part.stdout, new RegExp(`새로 물을 답변 ${2 - already}건`));
+  const bad = spawnSync(process.execPath, [script, '--dry-run', '--events=unknown'], { encoding: 'utf8', env });
+  assert.notEqual(bad.status, 0, '없는 사건은 거부');
+});

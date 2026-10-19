@@ -416,7 +416,7 @@ function renderFourthNarrator(event, a) {
         <div class="narrative-card__keywords">${namesHtml}</div>
         <div class="narrative-card__label">자주 나온 요소 <small class="nlp-meta">(물은 횟수 중 나온 횟수)</small></div>
         <div class="nlp-chips">${elements || '<span class="nlp-meta">개념 사전과 일치하는 요소가 없습니다</span>'}</div>
-        <p class="fourth-card__meta">모델 ${escapeHtml(chosen.model)}${date ? ` · ${escapeHtml(date)} 수집` : ''} · 시스템 지시 없이 새 대화에서 질문</p>
+        <p class="fourth-card__meta">모델 ${escapeHtml(chosen.model)}${chosen.servedByFallback ? ' (처음 요청한 모델이 답하지 않아 대체 모델이 답함)' : ''}${date ? ` · ${escapeHtml(date)} 수집` : ''} · 시스템 지시 없이 새 대화에서 질문</p>
       </article>`;
   }).join('');
   const notes = ((FOURTH_DATA.observations || {})[event.id] || []);

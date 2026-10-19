@@ -15,9 +15,14 @@
      prompt        실제로 보낸 질문 원문 (fourth-narrator-data.js의 questions와 같아야 함)
      answer        답변 원문 (수정하지 않음)
      translationKo 일본어·중국어 답변의 한국어 참고 번역 (같은 모델로 생성, 화면에 'AI 참고 번역'으로 표시). 한국어 답변은 null
-     model         모델 ID
+     model         실제로 답한 모델 ID
+     requestedModel   처음 요청한 모델 ID
+     servedByFallback 처음 요청한 모델이 거절해 대체 모델이 답했으면 true
+     translationModel 참고 번역을 만든 모델 ID (번역이 없으면 null)
      collectedAt   수집 시각 (ISO 8601, UTC)
-     params        요청 설정 (시스템 프롬프트 없음, 기본 설정이면 {})
+     params        요청 설정 (시스템 프롬프트 없음, 모델 기본 설정)
+
+   수집 방법: node tools/collect-ai-narratives.mjs --dry-run 으로 계획을 확인한 뒤 --dry-run 없이 실행 (API 키 필요)
    ============================================================ */
 
 const aiNarrativesData = {
