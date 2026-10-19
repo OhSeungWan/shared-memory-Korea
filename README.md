@@ -321,6 +321,7 @@ QR코드로 들어와 약 5분 동안 한 사건을 탐구하고, **자신의 �
 ### RLS와 보안
 
 - 브라우저에는 **publishable(anon) 키만** 있습니다. `service_role` 키·비밀 키를 절대 코드에 넣지 마세요.
+- **Claude Code 프로젝트 설정**(`.claude/settings.json`): Supabase 조회 도구(목록·스키마·advisor)만 자동 허용하고, `execute_sql`·`apply_migration` 등 데이터·스키마·배포를 바꿀 수 있는 도구는 `ask`로 두어 실행 전에 확인을 받습니다(`tests/claude-settings.test.js`가 검사). 이 설정은 이 저장소에서 Claude Code를 쓸 때만 적용되며, 사용자·전역 설정, 세션 권한 모드, Supabase 대시보드·다른 도구에서의 변경까지 막지는 않습니다.
 - `shared_expressions`: 조회·등록만 허용, 수정·삭제 정책·권한 없음. 등록은 허용 컬럼·CHECK 제약 범위 안에서만.
 - `expression_empathy`: 등록만 허용, 조회 정책 없음. 집계는 함수로만.
 - 공감 중복 방지는 브라우저별 무작위 키 기준입니다. 저장소를 지우거나 다른 브라우저를 쓰면 다시 공감할 수 있습니다. 더 강하게 막으려면 Supabase 익명 로그인(Anonymous Sign-in) + `auth.uid()` 기준 UNIQUE를 권장합니다.
