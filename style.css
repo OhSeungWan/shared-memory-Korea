@@ -3282,3 +3282,13 @@ mark.hl--distinct {
 @media print {
   .step-cta, #cardProgress { display: none !important; }
 }
+
+/* 굵기 정리 (2026-10): 동양풍 디자인은 그대로, 투박하게 진한 제목·강조만 가볍게
+   한자 인장(사건 카드·카드 도장)의 굵기는 유지합니다. */
+.hero__title, .hero--v2 .hero__title { font-weight: 500; }
+.hero__title-sub { font-weight: 400; }
+.hero--v2 .hero__subtitle strong { font-weight: 500; }
+.hero-names__item { font-weight: 500; }
+.hero-card__event strong { font-weight: 700; }
+.hero-card__quote { font-weight: 500; }
+.memory-card__title { font-weight: 700; }
