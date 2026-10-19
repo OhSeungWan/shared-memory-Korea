@@ -61,6 +61,7 @@
         <a href="#" data-page="home"><span class="nav__full">프로젝트 소개</span><span class="nav__short" aria-hidden="true">소개</span></a>
         <a href="#" data-page="events" data-view="participate"><span class="nav__full">지금 참여하기</span><span class="nav__short" aria-hidden="true">참여하기</span></a>
         <a href="#" data-page="events" data-view="memory"><span class="nav__full">Shared Memory 보기</span><span class="nav__short" aria-hidden="true">결과 보기</span></a>
+        <a href="#" data-page="archive"><span class="nav__full">Shared Archive</span><span class="nav__short" aria-hidden="true">아카이브</span></a>
       </nav>
     </div>
   </header>
@@ -189,6 +190,7 @@
           </div>
         </div>
         <p class="intro__more">
+          <a href="#" data-page="archive">다른 사람들이 남긴 공동 표현 보기 (Shared Archive) →</a>
           <a href="#" data-page="qr">수업·전시용 사건별 QR 만들기 →</a>
           <a href="#" data-page="about">이 프로젝트가 가지는 의미 보기 →</a>
         </p>
@@ -639,6 +641,23 @@
             <p class="newcomer-note">다음 학생이 이 기기를 쓰나요? <button type="button" class="before-card__link" data-new-participant>새 참여자로 시작</button></p>
           </div>
         </aside>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         Shared Archive — 공개에 동의한 공동 표현을 사건별로 모아 보기 (script.js renderArchive)
+         ============================================================ -->
+    <section class="page page--archive" data-page-name="archive">
+      <div class="page__header page__header--compact">
+        <p class="page__eyebrow">SHARED ARCHIVE</p>
+        <h2 class="page__title">함께 남긴 공동 표현</h2>
+        <p class="page__desc">참여자가 서로 다른 기록을 살펴본 뒤 공개에 동의하고 남긴 한 문장입니다.<br />사건을 골라 읽어 보고, 마음에 닿는 표현에 공감을 남겨 주세요.</p>
+      </div>
+      <div class="archive">
+        <div class="shared-language-tabs" id="archiveEventTabs" role="tablist" aria-label="사건 선택"><!-- JS --></div>
+        <div class="archive__head" id="archiveEventHead"><!-- JS --></div>
+        <div id="archiveList"><!-- JS --></div>
+        <p class="archive__note">공감 수는 참여자의 반응일 뿐, 역사적 정답의 순위가 아닙니다. 링크·연락처가 담긴 글은 등록되지 않으며, 부적절한 표현은 운영자가 확인 후 보이지 않게 처리합니다.</p>
       </div>
     </section>
 

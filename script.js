@@ -1871,6 +1871,15 @@ async function submitSharedNarrative() {
     nameInput.focus();
     return;
   }
+  // 공개 문장·이유에 링크·이메일·전화번호가 있으면 막습니다 (부적절 게시물 예방).
+  if (Guide.checkPublicText) {
+    const bad = [[text, narrativeInput], [reason, reasonInput]].find(([v]) => !Guide.checkPublicText(v).ok);
+    if (bad) {
+      setSubmitStatus(Guide.PUBLIC_TEXT_MESSAGE, 'error');
+      bad[1]?.focus();
+      return;
+    }
+  }
   // 역사 용어 확인: 막지 않고 한 번 안내합니다. 같은 문장으로 다시 누르면 그대로 등록됩니다.
   const termNotes = Guide.checkHistoricalTerms ? Guide.checkHistoricalTerms(text, currentEventId) : [];
   if (termNotes.length && termCheckConfirmedFor !== text) {
@@ -2197,6 +2206,158 @@ async function handleEmpathy(id, button) {
   renderSharedList();
   if (document.querySelector('[data-tab-content="memory"].active')) renderMemoryTab();
 }
+
+/* ------------------------------------------------------------
+   Shared Archive — 공개에 동의한 공동 표현을 사건별 카드로 모아 봅니다.
+   · 기존 public_expressions RPC와 공감 기능을 그대로 씁니다 (DB 변경 없음, 댓글 없음).
+   · 동의 분리 이전 시범 제안과 숨김 처리한 제안은 넣지 않습니다 (Store.isArchivable).
+   ------------------------------------------------------------ */
+
+const ARCHIVE_PAGE_SIZE = 12;
+let archiveEventId = null;
+let archiveItems = [];
+let archiveCounts = {};
+let archiveEmpathyAvailable = false;
+let archiveVisible = ARCHIVE_PAGE_SIZE;
+let archiveState = 'idle';
+let archiveError = '';
+
+function openArchive(eventId) {
+  navigateTo('archive');
+  loadArchive(eventId || archiveEventId || eventsData[0].id);
+}
+
+function renderArchiveTabs() {
+  const tabs = document.getElementById('archiveEventTabs');
+  if (!tabs) return;
+  tabs.innerHTML = eventsData.map(e => {
+    const on = e.id === archiveEventId;
+    return `<button type="button" class="shared-language-tabs__tab${on ? ' is-active' : ''}" data-archive-event="${escapeAttr(e.id)}" role="tab" aria-selected="${on}">${escapeHtml(e.title)}</button>`;
+  }).join('');
+}
+
+async function loadArchive(eventId) {
+  archiveEventId = eventId;
+  archiveVisible = ARCHIVE_PAGE_SIZE;
+  archiveState = 'loading';
+  renderArchiveTabs();
+  renderArchive();
+  if (!Store) {
+    archiveState = 'error';
+    archiveError = '저장 모듈(shared-store.js)을 불러오지 못했습니다.';
+    renderArchive();
+    return;
+  }
+  const [res, emp] = await Promise.all([Store.loadExpressions(eventId), Store.fetchEmpathyCounts(eventId)]);
+  if (eventId !== archiveEventId) return;   // 불러오는 사이 다른 사건을 고른 경우
+  if (res.error) {
+    archiveState = 'error';
+    archiveError = res.error;
+    archiveItems = [];
+  } else {
+    archiveState = 'ready';
+    archiveItems = res.data.filter(Store.isArchivable);
+  }
+  archiveEmpathyAvailable = emp.available;
+  archiveCounts = emp.counts || {};
+  renderArchive();
+}
+
+function renderArchive() {
+  const head = document.getElementById('archiveEventHead');
+  const list = document.getElementById('archiveList');
+  const event = eventsData.find(e => e.id === archiveEventId);
+  if (!list || !event) return;
+
+  if (head) {
+    head.innerHTML = `
+      <div class="detail__era">${escapeHtml(event.era)}</div>
+      <h3 class="archive__title">${escapeHtml(event.title)}</h3>
+      ${event.question ? `<p class="detail__question"><span class="detail__question-label">역사적 질문</span>${escapeHtml(event.question)}</p>` : ''}
+      <button type="button" class="btn btn--small" data-archive-explore="${escapeAttr(event.id)}">이 사건 직접 탐구하기 →</button>
+    `;
+  }
+
+  if (archiveState === 'loading') {
+    list.innerHTML = '<div class="shared-empty">공동 표현을 불러오는 중입니다...</div>';
+    return;
+  }
+  if (archiveState === 'error') {
+    list.innerHTML = `<div class="shared-empty">공동 표현을 불러오지 못했습니다. ${escapeHtml(archiveError)}</div>`;
+    return;
+  }
+  if (!archiveItems.length) {
+    list.innerHTML = '<div class="shared-empty">아직 이 사건에 공개된 공동 표현이 없습니다. 직접 탐구하고 첫 번째 표현을 남겨 보세요.</div>';
+    return;
+  }
+
+  const empathized = Store.empathizedSet();
+  const visible = archiveItems.slice(0, archiveVisible);
+  list.innerHTML = `<p class="nlp-meta">공개 동의를 받은 표현 ${archiveItems.length}건 · 최신순</p>
+    <div class="archive-grid">${visible.map(item => {
+      const id = escapeAttr(String(item.id));
+      const badge = getLangBadge(item.lang || 'unknown');
+      const count = archiveCounts[String(item.id)] || 0;
+      const mine = empathized.has(String(item.id));
+      const empathy = archiveEmpathyAvailable ? `
+        <button type="button" class="shared-item__action${mine ? ' is-done' : ''}" data-archive-empathy="${id}" ${mine ? 'disabled aria-pressed="true"' : 'aria-pressed="false"'}>
+          ${mine ? '공감했어요' : '공감해요'} · <strong>${count}</strong>
+        </button>` : '';
+      return `
+        <article class="shared-item archive-card" data-expression-id="${id}">
+          <div class="shared-item__text">"${escapeHtml(item.text)}"</div>
+          <div class="shared-item__header">
+            <div class="shared-item__user">
+              ${escapeHtml(item.user)}
+              <span class="narrative-card__keyword">${badge.flag} ${badge.label}</span>
+            </div>
+            <div class="shared-item__date">${escapeHtml(formatSharedDate(item.createdAt))}</div>
+          </div>
+          <div class="shared-item__actions">${empathy}</div>
+        </article>`;
+    }).join('')}</div>` + (archiveItems.length > visible.length
+    ? `<button type="button" class="btn btn--small shared-more" data-archive-more>더 보기 (${archiveItems.length - visible.length}건 남음)</button>`
+    : '');
+}
+
+async function handleArchiveEmpathy(id, button) {
+  if (!Store) return;
+  button.disabled = true;
+  const res = await Store.addEmpathy(id);
+  if (res.ok) {
+    archiveCounts[String(id)] = (archiveCounts[String(id)] || 0) + 1;
+    // 사건 화면이 같은 사건의 공감 수를 들고 있으면 함께 맞춥니다.
+    if (archiveEventId === currentEventId) empathyCounts[String(id)] = (empathyCounts[String(id)] || 0) + 1;
+  } else if (res.unavailable) {
+    archiveEmpathyAvailable = false;
+  } else if (!res.duplicate) {
+    button.disabled = false;
+    const list = document.getElementById('archiveList');
+    if (list) list.insertAdjacentHTML('afterbegin', `<div class="shared-empty">공감을 저장하지 못했습니다. ${escapeHtml(res.error || '')}</div>`);
+    return;
+  }
+  renderArchive();
+}
+
+document.getElementById('archiveEventTabs')?.addEventListener('click', e => {
+  const tab = e.target.closest('[data-archive-event]');
+  if (tab && tab.dataset.archiveEvent !== archiveEventId) loadArchive(tab.dataset.archiveEvent);
+});
+
+document.querySelector('.page--archive')?.addEventListener('click', e => {
+  const empathy = e.target.closest('[data-archive-empathy]');
+  if (empathy) { handleArchiveEmpathy(empathy.dataset.archiveEmpathy, empathy); return; }
+  if (e.target.closest('[data-archive-more]')) {
+    archiveVisible += ARCHIVE_PAGE_SIZE;
+    renderArchive();
+    return;
+  }
+  const explore = e.target.closest('[data-archive-explore]');
+  if (explore) {
+    eventsMode = 'participate';
+    openEventDetail(explore.dataset.archiveExplore);
+  }
+});
 
 function escapeHtml(str) {
   const div = document.createElement('div');
@@ -3584,6 +3745,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // 상단 메뉴: "지금 참여하기"는 참여 시작 영역부터, "Shared Memory 보기"는 결과 보기용 사건 선택으로
       if (el.dataset.view === 'participate') { startExploration(); return; }
       if (el.dataset.view === 'memory') { gotoEvents('memory'); return; }
+      if (el.dataset.page === 'archive') { openArchive(); return; }
       navigateTo(el.dataset.page);
     });
   });

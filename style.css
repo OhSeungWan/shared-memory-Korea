@@ -2173,6 +2173,15 @@ details.ai-result__section[open] > summary { margin-bottom: 0.75rem; }
 }
 .intro__more a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 
+/* Shared Archive: 공개 공동 표현 카드 (기존 shared-item·탭 스타일 재사용) */
+.archive { max-width: 1080px; margin: 0 auto; padding: 0 2rem 4rem; }
+.archive__head { margin: 0.5rem 0 1.5rem; display: flex; flex-direction: column; align-items: flex-start; gap: 0.6rem; }
+.archive__title { font-family: 'Noto Serif KR', serif; font-size: 1.4rem; }
+.archive-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin: 0.8rem 0 1.2rem; }
+.archive-card { display: flex; flex-direction: column; gap: 0.8rem; margin: 0; }
+.archive-card .shared-item__text { flex: 1; }
+.archive__note { font-size: 0.8rem; color: var(--ink-mute); margin-top: 2rem; line-height: 1.7; }
+
 /* 상단 메뉴: 넓은 화면은 전체 이름, 좁은 화면은 짧은 이름 */
 .nav__menu a { white-space: nowrap; }
 .nav__short { display: none; }
@@ -2186,10 +2195,13 @@ details.ai-result__section[open] > summary { margin-bottom: 0.75rem; }
 @media (max-width: 640px) {
   .nav__full { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
   .nav__short { display: inline; }
+  .nav__menu { gap: 0.8rem; }
+  .nav__logo-text em { display: none; }            /* 메뉴 4개가 들어가도록 좁은 화면에서는 부제 숨김 */
   .hero__cta { flex-direction: column; align-items: flex-start; }
   .hero__steps { grid-template-columns: 1fr; gap: 0.7rem; margin-top: 1.6rem; }
   .age-picker__next-btn { width: 100%; justify-content: center; }
   .intro__more { text-align: left; }
+  .archive { padding: 0 1rem 3rem; }
   .age-picker { padding: 1rem; }
   .age-picker__options .age-chip { flex: 1 1 calc(33.333% - 0.5rem); padding: 0.5rem 0.4rem; white-space: nowrap; }
   .age-picker__options--compact .age-chip { flex: 1 1 calc(50% - 0.5rem); }
@@ -2203,6 +2215,10 @@ details.ai-result__section[open] > summary { margin-bottom: 0.75rem; }
   .gen-row, .gen-row.is-hidden { grid-template-columns: 1fr; gap: 0.4rem; }
   .gen-row__age { flex-direction: row; align-items: baseline; gap: 0.5rem; }
   .gen-row__cell:last-child { grid-column: auto; }
+}
+
+@media (max-width: 480px) {
+  .nav__logo-text { display: none; }               /* 휴대폰: 메뉴 4개가 들어가도록 로고는 共 표시만 */
 }
 
 

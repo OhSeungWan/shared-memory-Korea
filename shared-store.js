@@ -25,6 +25,25 @@
   const LOAD_LIMIT = 500;
   const LIMITS = { name: 40, content: 1000, reason: 1000, before: 500 };
 
+  /* ---------- 공개 게시물 관리 (DB를 바꾸지 않는 최소 방침, README 참고) ----------
+     · HIDDEN_EXPRESSION_IDS: 부적절하다고 판단한 제안의 id를 적으면 목록·지도·아카이브 어디에도 표시하지 않습니다.
+       DB의 행은 그대로 두며, 영구 삭제는 운영자 승인 후 Supabase 대시보드에서 합니다.
+     · ARCHIVE_SINCE: Shared Archive에는 공개 등록에 별도 동의를 받기 시작한 배포(2026-10-16) 이후의 제안만 모읍니다.
+       그 전 시범 운영 제안은 아카이브에 넣지 않습니다. */
+  const HIDDEN_EXPRESSION_IDS = [];
+  const ARCHIVE_SINCE = '2026-10-16T13:00:00Z';
+
+  function isHidden(id) {
+    return HIDDEN_EXPRESSION_IDS.some(h => String(h) === String(id));
+  }
+
+  /** Shared Archive에 보여 줄 수 있는 제안인가 (동의 분리 이후 등록 · 숨김 아님) */
+  function isArchivable(item) {
+    if (!item || isHidden(item.id)) return false;
+    const t = Date.parse(item.createdAt || '');
+    return !isNaN(t) && t >= Date.parse(ARCHIVE_SINCE);
+  }
+
   function client() {
     try {
       // supabase-config.js의 최상위 const db (전역 스코프)
@@ -164,7 +183,7 @@
     const c = client();
     if (!c) return { data: [], error: '데이터베이스에 연결할 수 없습니다.' };
     const done = (rows, source) => ({
-      data: (rows || []).map(mapRow), error: null, source,
+      data: (rows || []).map(mapRow).filter(r => !isHidden(r.id)), error: null, source,
       limited: (rows || []).length >= LOAD_LIMIT
     });
     try {
@@ -362,6 +381,10 @@
     LIMITS,
     LOAD_LIMIT,
     PUBLIC_COLUMNS,
+    HIDDEN_EXPRESSION_IDS,
+    ARCHIVE_SINCE,
+    isHidden,
+    isArchivable,
     insertExpression,
     loadExpressions,
     fetchEmpathyCounts,
