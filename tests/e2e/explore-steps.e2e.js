@@ -35,7 +35,10 @@ run('explore-steps', async ({ browser, base, check, mockPage }) => {
     const r = b.getBoundingClientRect();
     return { title: t.innerText.replace(/\s+/g, ' '), titleOp: Math.min(...[...t.querySelectorAll('.hero__title-line')].map(op)), btnOp: op(b), btnBottom: r.bottom, btnH: r.height, vh: window.innerHeight };
   });
-  check('첫 화면 메인 카피: 같은 역사, 다른 기억 · 당신은 어떻게 기억하나요?', /같은 역사, 다른 기억\. 당신은 어떻게 기억하나요\?/.test(hero.title), hero.title);
+  check('첫 화면 메인 카피: 같은 전쟁, 세 개의 이름 · 그리고 AI는 뭐라고 부를까요?', /같은 전쟁, 세 개의 이름\. 그리고 AI는 뭐라고 부를까요\?/.test(hero.title), hero.title);
+  const heroNames = await page.$$eval('.hero-names__item span', els => els.map(e => e.textContent.trim()));
+  check('첫 화면에 같은 전쟁의 세 이름과 AI', heroNames.join('|') === '임진왜란|文禄・慶長の役|万历朝鲜战争|?', heroNames.join('|'));
+  check('시작 버튼: 다섯 번째 서술자 되어 보기', /다섯 번째 서술자 되어 보기/.test(await page.textContent('#startButton')));
   check('1초 안에 제목·시작 버튼이 완전히 보임 (긴 등장 지연 없음)', hero.titleOp === 1 && hero.btnOp === 1, JSON.stringify(hero));
   check('모바일 첫 화면(스크롤 없이)에 시작 버튼', hero.btnBottom <= hero.vh, JSON.stringify(hero));
   check('시작 버튼 터치 영역 48px 이상', hero.btnH >= 48, String(hero.btnH));
