@@ -1,0 +1,151 @@
+# Shared Memory — 자동 테스트
+# · 단위 테스트(npm test)와 브라우저 E2E(npm run test:e2e, 실제 Chromium + 가짜 Supabase)를 실행합니다.
+# · 비밀 키·운영 DB 인증 정보를 쓰지 않습니다. 저장소 읽기 권한만 사용합니다.
+# · 테스트가 0개 실행되거나, E2E가 실행되지 못하면(SKIPPED) 실패로 처리합니다.
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'          # 로컬 검증 버전 (Node.js 22 LTS)
+  CI: 'true'
+
+jobs:
+  unit:
+    name: Unit tests (npm test)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies (npm ci, lockfile 고정)
+        run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+      - name: Versions
+        run: |
+          node --version
+          npm --version
+
+      - name: Run unit tests
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee unit-tap.txt
+          tests=$(grep -E '^# tests [0-9]+' unit-tap.txt | tail -1 | awk '{print $3}')
+          fail=$(grep -E '^# fail [0-9]+' unit-tap.txt | tail -1 | awk '{print $3}')
+          echo "단위 테스트: ${tests:-0}개 실행, 실패 ${fail:-?}개"
+          if [ -z "$tests" ] || [ "$tests" -eq 0 ]; then
+            echo "::error::단위 테스트가 하나도 실행되지 않았습니다."
+            exit 1
+          fi
+          {
+            echo "### Unit tests"
+            echo ""
+            echo "- 실행: ${tests}개 / 실패: ${fail}개 (Node $(node --version))"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload unit test log
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: unit-test-log
+          path: unit-tap.txt
+          if-no-files-found: warn
+          retention-days: 14
+
+  e2e:
+    name: Browser E2E (npm run test:e2e)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies (npm ci, lockfile 고정)
+        run: npm ci
+
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Versions
+        run: |
+          node --version
+          npm --version
+          npx playwright --version
+          node -e "const b=require('playwright-core/browsers.json').browsers.find(x=>x.name==='chromium');console.log('chromium revision', b.revision, 'version', b.browserVersion)"
+
+      - name: Block production Supabase host (테스트가 운영 DB에 닿지 않도록)
+        shell: bash
+        run: |
+          host=$(grep -oE 'https://[a-z0-9]+\.supabase\.co' supabase-config.js | head -1 | sed 's#https://##')
+          if [ -z "$host" ]; then echo "::error::supabase-config.js에서 Supabase 주소를 찾지 못했습니다."; exit 1; fi
+          echo "0.0.0.0 ${host}" | sudo tee -a /etc/hosts >/dev/null
+          echo "blocked: ${host}"
+          if getent hosts "${host}" | grep -qv '^0\.0\.0\.0'; then echo "::error::차단 실패"; exit 1; fi
+
+      - name: Run browser E2E
+        shell: bash
+        run: |
+          set -o pipefail
+          unset E2E_ALLOW_SKIP          # SKIPPED를 성공으로 처리하지 않음 (run-all.js: 0=통과, 1=실패, 2=실행 못함)
+          npm run -s test:e2e 2>&1 | tee e2e-output.log
+
+      - name: E2E summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f e2e-output.log ]; then
+            {
+              echo "### Browser E2E"
+              echo ""
+              echo '```'
+              sed -n '/=== E2E 요약 ===/,$p' e2e-output.log
+              echo '```'
+              echo ""
+              echo '<details><summary>실행 환경</summary>'
+              echo ""
+              echo '```'
+              grep -E '^\[[a-z-]+\] Playwright' e2e-output.log || true
+              echo '```'
+              echo '</details>'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload E2E log
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: e2e-log
+          path: e2e-output.log
+          if-no-files-found: warn
+          retention-days: 14
