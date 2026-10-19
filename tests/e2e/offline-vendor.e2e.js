@@ -20,14 +20,7 @@ async function openPage(browser, base, presetContinue, apiHandler, viewport) {
   page.__errors = [];
   page.__external = [];
   page.__api = [];
-  page.__vendor = [];
   page.on('pageerror', e => page.__errors.push(e.message));
-  page.on('response', async res => {
-    if (/\/vendor\/supabase-js\/supabase\.js$/.test(res.url())) {
-      const body = await res.body().catch(() => Buffer.alloc(0));
-      page.__vendor.push({ url: res.url(), status: res.status(), sha256: crypto.createHash('sha256').update(body).digest('hex') });
-    }
-  });
   // 1) 같은 주소 밖 요청은 모두 차단 (CDN·폰트 포함) — Supabase API는 아래에서 따로 처리
   await page.route(url => !url.href.startsWith(base) && !SUPABASE.test(url.href), r => { page.__external.push(r.request().url()); r.abort(); });
   // 2) Supabase API: 실제 서버로 보내지 않음
@@ -58,8 +51,13 @@ run('offline-vendor', async ({ browser, base, check, presetContinue }) => {
     return json(r, 404, { message: 'not mocked' });
   });
   let page = ok.page;
+  // 응답 대기를 goto 전에 걸어 두어, 본문 해시를 확인하기 전에 검사가 먼저 실행되지 않게 합니다.
+  const vendorResponse = page.waitForResponse(res => /\/vendor\/supabase-js\/supabase\.js$/.test(res.url()));
   await page.goto(base + 'index.html');
-  const vendor = page.__vendor[0];
+  const vendor = await vendorResponse.then(async res => ({
+    url: res.url(), status: res.status(),
+    sha256: crypto.createHash('sha256').update(await res.body()).digest('hex')
+  })).catch(e => ({ error: e.message }));
   check('supabase-js를 같은 주소의 vendor 파일에서 받음 (HTTP 200)', vendor && vendor.status === 200 && vendor.url.startsWith(base), JSON.stringify(vendor));
   check(`받은 vendor 파일이 기록된 ${VERSION.version} 파일과 같음 (sha256)`, vendor && vendor.sha256 === VERSION.fileSha256);
   check('외부 CDN 없이 supabase-js가 로드됨 (window.supabase.createClient)', await page.evaluate(() => !!(window.supabase && typeof window.supabase.createClient === 'function')));
