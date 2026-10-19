@@ -3282,3 +3282,230 @@ mark.hl--distinct {
 @media print {
   .step-cta, #cardProgress { display: none !important; }
 }
+
+/* ============================================================
+   22. 에디토리얼 리프레시 (2026-10, 본선)
+   방향: 박물관 아카이브·에디토리얼. 종이 바탕 + 먹색 + 인장 주홍 한 가지.
+   · 형광펜·그라데이션·기울인 카드·두꺼운 그림자·알약 모양을 걷어 내고, 1px 선과 여백으로 위계를 만듭니다.
+   · 나라 색은 채도를 낮춰 얇은 선·작은 점으로만 씁니다. 구조(HTML)와 기능은 그대로입니다.
+   ============================================================ */
+:root {
+  --bg-main: #f5f2ec;        /* 종이 */
+  --bg-soft: #efebe3;        /* 옅은 판 */
+  --bg-card: #fbfaf7;        /* 카드 */
+  --ink: #161514;
+  --ink-soft: #3e3b37;
+  --ink-mute: #69645d;       /* 종이 바탕 대비 5:1 이상 */
+  --line: #d9d3c8;
+  --hair: rgba(22, 21, 20, 0.14);
+
+  --korea: #9b3d37;          /* 낮춘 진홍 */
+  --japan: #33405f;          /* 낮춘 남색 */
+  --china: #8f7130;          /* 낮춘 황토 */
+
+  --accent: #9a2d22;         /* 인장 주홍 */
+  --accent-soft: #efe3d8;
+
+  --radius: 2px;
+  --radius-lg: 3px;
+  --shadow-sm: none;
+  --shadow-md: 0 1px 0 rgba(22, 21, 20, 0.06);
+  --shadow-lg: 0 18px 40px -28px rgba(22, 21, 20, 0.35);
+  --shadow-paper: 0 24px 48px -32px rgba(22, 21, 20, 0.35);
+
+  /* 분석 형광펜(기능)은 유지하되 색을 차분하게 */
+  --hl-yellow: rgba(196, 160, 82, 0.28);
+  --hl-rose: rgba(154, 45, 34, 0.12);
+}
+
+body { background: var(--bg-main); background-image: none; letter-spacing: -0.005em; }
+h1, h2, h3, h4 { font-weight: 500; letter-spacing: -0.025em; }
+strong, b { font-weight: 700; }
+
+/* 상단 메뉴 */
+.nav { background: rgba(245, 242, 236, 0.94); border-bottom: 1px solid var(--hair); }
+
+/* 소제목(eyebrow): 기울임·넓은 자간을 걷고 작은 라벨로 */
+.page__eyebrow {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-style: normal;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+.page__title { font-weight: 500; letter-spacing: -0.03em; }
+
+/* 강조: 노란 형광펜 대신 인장색 글자 */
+.hl-ink { background: none; padding: 0; color: var(--accent); }
+
+/* 버튼: 사각형 · 먹색 · 그림자 없음 */
+.btn { border-radius: var(--radius); }
+.btn--primary { background: var(--ink); color: var(--bg-card); box-shadow: none; font-weight: 500; letter-spacing: 0.01em; }
+.btn--primary:hover { background: var(--accent); transform: none; box-shadow: none; }
+.btn--hero { border-radius: var(--radius); box-shadow: none; font-weight: 500; min-height: 56px; padding: 0.95rem 1.8rem; font-size: 1.02rem; }
+
+/* 알약 모양 → 얇은 사각 */
+.event-card__tag, .nlp-badge, .shared-language-tabs__tab, .guide-sample__tag, .shared-item__style,
+.source-card__type, .cluster-card__badge, .event-card__featured, .source-verify, .hero-card__tag,
+.hero-card__stamps li, .step-cta__back, .step-cta__main, .card-actions .btn--primary, .fourth-runs__btn {
+  border-radius: var(--radius);
+}
+.event-card__tag, .narrative-card__keyword {
+  background: transparent;
+  border: 1px solid var(--hair);
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+.nlp-chip { background: transparent; border-color: var(--hair); }
+.nlp-chip:hover { border-color: var(--ink); }
+
+/* ---------- 첫 화면 ---------- */
+.hero--v2 .hero__map { display: none; }
+.hero--v2 { padding: 4.5rem 0 3rem; }
+.hero--v2 .hero__eyebrow {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  color: var(--ink-mute);
+  margin-bottom: 1.6rem;
+}
+.hero--v2 .hero__title { font-weight: 500; letter-spacing: -0.045em; line-height: 1.1; }
+.hero__title-sub { font-family: 'Noto Serif KR', serif; font-weight: 400; color: var(--ink-soft); letter-spacing: -0.02em; }
+.hero--v2 .hero__subtitle { color: var(--ink-soft); line-height: 1.85; }
+.hero--v2 .hero__subtitle strong { font-weight: 500; color: var(--ink); border-bottom: 1px solid var(--accent); }
+.hero__meta { color: var(--ink-mute); }
+
+/* 같은 전쟁의 이름들: 상자 대신 박물관 라벨처럼 */
+.hero-names {
+  display: grid;
+  grid-template-columns: repeat(4, max-content);
+  gap: 0;
+  margin: 1.6rem 0 1.6rem;
+  padding: 0.9rem 0;
+  border-top: 1px solid var(--hair);
+  border-bottom: 1px solid var(--hair);
+}
+.hero-names__item {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.2rem;
+  background: none; border: 0; border-radius: 0;
+  padding: 0 1.4rem;
+  border-left: 1px solid var(--hair);
+  font-family: 'Noto Serif KR', serif; font-weight: 500; font-size: 1.12rem; line-height: 1.35;
+  color: var(--ink);
+}
+.hero-names__item:first-child { padding-left: 0; border-left: 0; }
+.hero-names__item small {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-family: 'Noto Sans KR', sans-serif; font-size: 0.68rem; font-weight: 500;
+  letter-spacing: 0.12em; color: var(--ink-mute);
+}
+.hero-names__item small::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--ink-mute); }
+.hero-names__item--korea small::before { background: var(--korea); }
+.hero-names__item--japan small::before { background: var(--japan); }
+.hero-names__item--china small::before { background: var(--china); }
+.hero-names__item--ai { border-style: solid; border-left: 1px solid var(--hair); color: var(--accent); }
+.hero-names__item--ai small::before { background: transparent; border: 1px solid var(--accent); }
+.hero-names__item--ai span { font-family: 'Noto Serif KR', serif; font-weight: 400; font-style: normal; }
+
+/* 카드 미리보기: 기울임·겹친 종이를 걷고 평평한 종이 한 장 */
+.hero-card__stack::before { display: none; }
+.hero-card__paper {
+  transform: none;
+  border-radius: var(--radius);
+  border: 1px solid var(--hair);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-paper);
+}
+.hero-card__paper .memory-card__band { height: 3px; }
+.hero-card__head { font-family: 'Noto Sans KR', sans-serif; font-weight: 500; font-size: 0.66rem; letter-spacing: 0.2em; }
+.hero-card__event small { font-family: 'Noto Sans KR', sans-serif; letter-spacing: 0.06em; font-size: 0.74rem; }
+.hero-card__event strong { font-weight: 500; }
+.hero-card__seal { transform: none; border-radius: 2px; font-weight: 500; }
+.hero-card__quote { font-weight: 500; }
+.hero-card__stamps li { background: transparent; }
+.hero__steps--v2 { border-top: 1px solid var(--hair); }
+.hero__steps--v2 strong { font-weight: 500; }
+
+/* 소개 카드 */
+.intro__card { border: 1px solid var(--hair); background: transparent; }
+.intro__num { font-family: 'Noto Sans KR', sans-serif; font-weight: 500; letter-spacing: 0.12em; }
+
+/* ---------- 사건 고르기 ---------- */
+.event-card { border: 1px solid var(--hair); border-radius: var(--radius-lg); background: var(--bg-card); }
+.event-card:hover { transform: none; box-shadow: var(--shadow-lg); border-color: var(--ink); }
+.event-card__visual {
+  height: 140px;
+  background: var(--bg-soft);
+  border-bottom: 1px solid var(--hair);
+  font-weight: 500;
+  font-size: 3.2rem;
+  color: var(--ink);
+}
+.event-card__visual::before { opacity: 0.05; font-weight: 400; }
+.event-card__era { font-family: 'Noto Sans KR', sans-serif; letter-spacing: 0.06em; font-size: 0.78rem; }
+.event-card__title { font-weight: 500; }
+.event-card__featured { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+
+/* ---------- 사건 화면 ---------- */
+.tab { font-weight: 400; }
+.tab.active { color: var(--ink); font-weight: 500; }
+.tab.active .tab__sub { color: var(--accent); }
+.step-head__kicker { font-weight: 500; letter-spacing: 0.08em; }
+.step-head__q { font-weight: 500; }
+.scope-note { background: transparent; border-left: 2px solid var(--ink); border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); border-radius: 0; }
+
+/* 세 나라 서술 카드: 국기 배지 대신 얇은 인장 */
+.narrative-card { border: 1px solid var(--hair); border-top: 2px solid var(--line); box-shadow: none; background: var(--bg-card); }
+.narrative-card:hover { transform: none; box-shadow: var(--shadow-lg); }
+.narrative-card__flag-mark {
+  border-radius: 2px;
+  background: transparent !important;
+  border: 1px solid currentColor;
+  width: 28px; height: 28px;
+  font-weight: 500; font-size: 0.86rem;
+}
+.narrative-card--korea .narrative-card__flag-mark { color: var(--korea); }
+.narrative-card--japan .narrative-card__flag-mark { color: var(--japan); }
+.narrative-card--china .narrative-card__flag-mark { color: var(--china); }
+.narrative-card__country { font-weight: 500; }
+.narrative-card__title { font-weight: 500; }
+
+/* 진행 표시 · 아래 고정 버튼 */
+.stepper__bar { height: 2px; border-radius: 0; }
+.step-cta { background: rgba(245, 242, 236, 0.96); box-shadow: none; border-top: 1px solid var(--hair); }
+.step-cta__main { font-weight: 500; }
+
+/* 네 번째 서술자 · 기억의 빈자리 */
+.fourth-cta { border: 1px solid var(--hair); border-left: 2px solid var(--accent); border-radius: var(--radius); background: var(--bg-card); }
+.fourth-cta:hover { box-shadow: var(--shadow-lg); transform: none; }
+.fourth-cta__kicker { font-weight: 500; letter-spacing: 0.1em; }
+.fourth-cta__q { font-weight: 500; }
+.fourth-card { border: 1px solid var(--hair); border-top: 2px solid var(--ink); border-radius: var(--radius); box-shadow: none; }
+.fourth-empty { border-radius: var(--radius); }
+.gap-table-wrap { border: 1px solid var(--hair); border-radius: var(--radius); }
+.gap-table thead th { background: transparent; border-bottom: 1px solid var(--ink); }
+.gap-table tr.gap-group th { background: transparent; }
+.gap-summary__item { border: 0; border-left: 2px solid var(--line); border-radius: 0; background: transparent; padding: 0.35rem 0.9rem; }
+.gap-summary__item--key { border-left-color: var(--accent); }
+
+@media (max-width: 640px) {
+  .hero--v2 { padding: 2.2rem 0 2rem; }
+  .hero--v2 .hero__eyebrow { margin-bottom: 1rem; }
+  .hero-names { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 0.7rem; padding: 0.7rem 0; margin: 1rem 0 1.1rem; }
+  .hero-names__item { padding: 0 0.9rem; font-size: 0.98rem; }
+  .hero-names__item:nth-child(odd) { padding-left: 0; border-left: 0; }
+}
+
+/* 날짜·단계 숫자: 장식 영문 글꼴 대신 본문 글꼴의 고른 숫자 */
+.detail__era, .stepper__num, .timeline__year, .hero__step-num, .memory-card__era, .qr-card__era, .cluster-card__rank {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+.detail__era { font-size: 0.8rem; color: var(--ink-mute); }
+.stepper__num { font-size: 0.82rem; color: var(--accent); }
+.detail__title { font-weight: 500; }
