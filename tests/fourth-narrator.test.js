@@ -149,3 +149,29 @@ test('수집 스크립트 미리 보기: API를 부르지 않고 계획만 출�
   const bad = spawnSync(process.execPath, [script, '--dry-run', '--events=unknown'], { encoding: 'utf8', env });
   assert.notEqual(bad.status, 0, '없는 사건은 거부');
 });
+
+test('다섯 번째 서술자: 참여자 문장이 채운 빈자리와 새로 쓴 요소', () => {
+  const r = NA.analyzeEvent(byId('hiroshima'), [], data);
+  const p = NA.placeSentence(r, '히로시마에는 강제 동원된 조선인 피해자도 있었고, 평화를 위해 함께 기억해야 한다.');
+  const victims = p.filled.find(f => f.id === 'focus:korean-victims');
+  assert.ok(victims, '조선인 피해자를 채움');
+  assert.deepEqual(victims.missingIn, ['japan']);
+  assert.ok(!p.filled.some(f => f.id === 'concept:peace'), '이미 일부 서술에 있고 빈자리가 아닌 요소는 채운 빈자리가 아님');
+  assert.ok(p.fresh.some(f => f.id === 'concept:memory'), '어느 서술에도 없던 요소는 새로 쓴 요소');
+  assert.deepEqual(NA.placeSentence(r, ''), { filled: [], fresh: [] });
+  assert.deepEqual(NA.placeSentence(r, '아무 관련 없는 문장'), { filled: [], fresh: [] });
+});
+
+test('카드 모델: 다섯 번째 서술자 칸은 내용이 있을 때만, 개수 제한', () => {
+  const Card = require('../memory-card.js');
+  const event = byId('hiroshima');
+  const base = { event, before: '처음 생각', after: '조선인 피해자도 함께 기억하자' };
+  assert.equal(Card.buildCardModel(Object.assign({}, base, { fifth: null })).fifth, null);
+  assert.equal(Card.buildCardModel(Object.assign({}, base, { fifth: { filled: [], fresh: [] } })).fifth, null);
+  const many = { filled: [1, 2, 3, 4].map(n => ({ label: '요소' + n, where: ['일본 측 서술'] })), fresh: [1, 2, 3].map(n => ({ label: '새' + n })) };
+  const m = Card.buildCardModel(Object.assign({}, base, { fifth: many }));
+  assert.equal(m.fifth.filled.length, 3);
+  assert.equal(m.fifth.fresh.length, 2);
+  assert.equal(Card.buildCardModel(Object.assign({}, base, { after: '', fifth: many })).fifth, null, '탐구 후 문장이 없으면 칸 없음');
+  assert.equal(Card.fifthNarrator({ filled: [{ label: '이름만', where: [] }] }), null, '어느 서술에 없었는지 모르면 표시하지 않음');
+});

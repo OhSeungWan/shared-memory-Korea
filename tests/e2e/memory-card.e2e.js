@@ -62,6 +62,8 @@ run('memory-card', async ({ browser, base, check, mockPage }) => {
     document.querySelector('.memory-card__quote--before').textContent, document.querySelector('.memory-card__quote--after').textContent).addedConcepts)]);
   check('생각의 변화는 실제 새로 쓴 단어로만 표시 (평가 문구 없음)', /새로 쓴 말/.test(added) && !/향상|성장|발전했|점수|정답|우수/.test(cardBody) &&
     afterWords.slice(0, 3).every(w => added.includes(w)), added);
+  const fifth = await page.$eval('.memory-card__fifth', el => el.textContent).catch(() => '');
+  check('다섯 번째 서술자: 내 문장이 채운 빈자리(차별 — 일본 측 서술에는 없던 요소) 표시', /차별 — 일본 측 서술에는 없던 요소/.test(fifth.replace(/\s+/g, ' ')), fifth);
   check('공개 등록 없이 카드를 받음 (서버 저장 0건)', (await insertCount(page)) === 0);
   check('카드 내용이 저장소에 남지 않음 (sm_card 키 없음)', await page.evaluate(() => !Object.keys(localStorage).some(k => /card/i.test(k))));
 

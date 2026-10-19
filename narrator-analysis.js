@@ -134,7 +134,7 @@
     focus.forEach(el => {
       const cells = {};
       narrators.forEach(n => { cells[n.key] = presenceOf(n, el.forms); });
-      rows.push({ id: 'focus:' + el.id, label: el.label, kind: 'focus', cells });
+      rows.push({ id: 'focus:' + el.id, label: el.label, kind: 'focus', forms: el.forms, cells });
     });
     const conceptRows = [];
     Analyzer.CONCEPTS.forEach((concept, order) => {
@@ -145,7 +145,7 @@
         cells[n.key] = presenceOf(n, forms);
         if (cells[n.key].hits > 0) anyHit = true;
       });
-      if (anyHit) conceptRows.push({ id: 'concept:' + concept.id, label: concept.label, kind: 'concept', frame: concept.frame, cells, order });
+      if (anyHit) conceptRows.push({ id: 'concept:' + concept.id, label: concept.label, kind: 'concept', frame: concept.frame, forms, cells, order });
     });
     const presentCount = r => Object.keys(r.cells).filter(k => r.cells[k].present).length;
     conceptRows.sort((a, b) => presentCount(b) - presentCount(a) || a.order - b.order);
@@ -198,6 +198,35 @@
     };
   }
 
+  /**
+   * 다섯 번째 서술자: 참여자의 문장을 빈자리 표에 한 줄로 넣어 봅니다.
+   * · filled: 어떤 서술자에게는 빈자리였던 요소를 참여자 문장이 담은 경우 (missingIn = 그 서술자 key 목록)
+   * · fresh : 비교한 서술자 누구에게도 없던 요소를 참여자 문장이 쓴 경우
+   * 평가가 아니라 관찰입니다. 개념 사전·사건별 확인 요소에 있는 표현만 찾습니다.
+   * @param {object} result  analyzeEvent의 결과
+   * @param {string} text    참여자의 탐구 후 문장
+   */
+  function placeSentence(result, text) {
+    const empty = { filled: [], fresh: [] };
+    if (!result || typeof text !== 'string' || !text.trim()) return empty;
+    const me = { key: 'me', texts: [text] };
+    const filled = [];
+    const fresh = [];
+    const seen = {};
+    result.rows.forEach(row => {
+      seen[row.id] = true;
+      const p = presenceOf(me, row.forms || []);
+      if (!p.hits) return;
+      if (row.gapKeys.length) filled.push({ id: row.id, label: row.label, kind: row.kind, missingIn: row.gapKeys.slice(), forms: p.forms });
+      else if (!row.presentKeys.length) fresh.push({ id: row.id, label: row.label, kind: row.kind, forms: p.forms });
+    });
+    Analyzer.findConcepts(text).forEach(c => {
+      const id = 'concept:' + c.id;
+      if (!seen[id]) fresh.push({ id, label: c.label, kind: 'concept', forms: c.forms });
+    });
+    return { filled, fresh };
+  }
+
   return {
     NATIONS,
     AI_LANGS,
@@ -210,6 +239,7 @@
     nameUsage,
     elementRows,
     markGaps,
-    analyzeEvent
+    analyzeEvent,
+    placeSentence
   };
 });

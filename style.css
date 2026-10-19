@@ -3390,3 +3390,10 @@ body { word-break: keep-all; overflow-wrap: break-word; }
   .hero-card__paper { transform: none; }                /* 기울임 */
   .hero-card { max-width: 320px; }
 }
+
+/* 다섯 번째 서술자 칸 (My Memory Card) */
+.memory-card__fifth-list strong { font-family: 'Noto Serif KR', serif; color: var(--accent); font-weight: 700; }
+.memory-card__fifth .memory-card__muted { margin-top: 0.4rem; font-size: 0.78rem; }
+.memory-card__fifth-list { list-style: none; display: grid; gap: 0.35rem; font-size: 0.92rem; line-height: 1.55; }
+.memory-card__fifth-list li { padding-left: 1.1rem; position: relative; }
+.memory-card__fifth-list li::before { content: ''; position: absolute; left: 0; top: 0.75em; width: 0.6rem; height: 2px; background: var(--accent); }

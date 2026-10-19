@@ -3304,10 +3304,27 @@ function currentCardModel() {
     customDiscovery: cardState.custom,
     question: cardState.question,
     change,
+    fifth: fifthNarratorInput(event, cardState.after),
     flow,
     published: cardState.published,
     date: new Date()
   });
+}
+
+/** 다섯 번째 서술자: 탐구 후 문장을 빈자리 표에 넣어 본 결과 (카드용, 서술자 이름 붙임) */
+function fifthNarratorInput(event, sentence) {
+  if (!Narrator || !FOURTH_DATA || !event || !sentence) return null;
+  try {
+    const a = Narrator.analyzeEvent(event, AI_RECORDS, FOURTH_DATA);
+    const p = Narrator.placeSentence(a, sentence);
+    return {
+      filled: p.filled.map(f => ({ label: f.label, where: f.missingIn.map(k => (NARRATOR_SHORT[k] || k) + ' 서술') })),
+      fresh: p.fresh.map(f => ({ label: f.label }))
+    };
+  } catch (e) {
+    console.error('다섯 번째 서술자 계산 오류:', e);
+    return null;
+  }
 }
 
 function renderDiscoveryOptions() {
@@ -3390,6 +3407,12 @@ function renderCardPreview() {
       : '<p class="memory-card__muted">탐구 전 문장을 남기지 않았어요.</p>')}
     <div class="memory-card__arrow" aria-hidden="true">↓</div>
     ${section('memory-card__after', '탐구 후 · 나의 한 문장', `<blockquote class="memory-card__quote memory-card__quote--after tier-${m.tiers.after}">“${escapeHtml(m.after)}”</blockquote>${change}`)}
+    ${m.fifth ? section('memory-card__fifth', '다섯 번째 서술자 · 내 문장이 담은 것', `
+      <ul class="memory-card__fifth-list">
+        ${m.fifth.filled.map(f => `<li><strong>${escapeHtml(f.label)}</strong> — ${f.where.map(escapeHtml).join('·')}에는 없던 요소</li>`).join('')}
+        ${m.fifth.fresh.map(f => `<li><strong>${escapeHtml(f)}</strong> — 비교한 서술 어디에도 없던 요소</li>`).join('')}
+      </ul>
+      <p class="memory-card__muted">세 나라 요약 서술${AI_RECORDS.length ? '·AI 답변' : ''}과 내 문장을 개념 사전으로 비교한 관찰이에요.</p>`) : ''}
     ${m.discoveries.length ? section('memory-card__found', '탐구하며 새롭게 발견한 관점', `<ul class="memory-card__list">${m.discoveries.map(d => `<li>${escapeHtml(d)}</li>`).join('')}</ul>`) : ''}
     ${m.myQuestion ? section('memory-card__ask', '아직 남은 나의 질문', `<p class="memory-card__ask-text">${escapeHtml(m.myQuestion)}</p>`) : ''}
     <ul class="memory-card__stamps" aria-label="탐구 기록">
