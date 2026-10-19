@@ -30,6 +30,12 @@ const Card = window.MemoryCard || null;
 const Guide = window.ContributionGuide || { STYLES: [], TEMPLATES: [], REASONS: [] };
 const Store = window.SharedStore || null;
 const MemoryMap = window.SharedMemoryMap || null;
+const Narrator = window.NarratorAnalysis || null;
+const FOURTH_DATA = typeof fourthNarratorData !== 'undefined' ? fourthNarratorData : null;
+// AI 답변 기록: 형식 검사(질문 원문 일치 등)를 통과한 기록만 화면에 씁니다.
+const AI_RECORDS = (Narrator && FOURTH_DATA && typeof aiNarrativesData !== 'undefined' && Array.isArray(aiNarrativesData.records))
+  ? aiNarrativesData.records.filter(r => Narrator.validateRecord(r, FOURTH_DATA.questions).length === 0)
+  : [];
 const SOURCES = typeof sourcesData !== 'undefined' ? sourcesData : [];
 
 // 공동 표현 작성 언어 — 표시 순서: 한국어 · 中文 · 日本語 · English
@@ -225,6 +231,8 @@ function openEventDetail(eventId) {
   renderKeywordChart(event);
   renderGlance();
   renderCompareSummary(event);
+  fourthRunChoice = {};
+  renderFourthTab(event);
   renderSourcesTab();
   resetGuide(event);
   rebuildDraftContext();
@@ -315,6 +323,187 @@ function switchTab(tabName) {
 }
 
 /* ------------------------------------------------------------
+   네 번째 서술자 · 기억의 빈자리 (narrator-analysis.js)
+   · 세 나라 요약 서술 + AI 답변 기록(ai-narratives-data.js)을 '서술자'로 나란히 놓고 비교합니다.
+   · AI는 실시간으로 부르지 않습니다. 기록이 없으면 '기록 전'과 질문 원문만 보여주고, 빈자리는 세 나라만으로 계산합니다.
+   · 화면 문구는 판정이 아니라 관찰로 씁니다 ("…가 없다"). 덜 언급했다고 왜곡이라는 뜻이 아닙니다.
+   ------------------------------------------------------------ */
+
+let fourthRunChoice = {};             // 언어별로 지금 보고 있는 답변 회차 (lang → run)
+const NARRATOR_SHORT = { korea: '한국 측', japan: '일본 측', china: '중국 측', 'ai-ko': 'AI · 한국어', 'ai-ja': 'AI · 일본어', 'ai-zh': 'AI · 중국어' };
+const AI_HTML_LANG = { ko: 'ko', ja: 'ja', zh: 'zh-Hans' };
+
+function renderFourthTab(event) {
+  const box = document.getElementById('fourthNarrator');
+  const gapBox = document.getElementById('memoryGaps');
+  if (!box || !gapBox) return;
+  if (!event || !Narrator || !FOURTH_DATA || !Analyzer) {
+    box.innerHTML = '<div class="shared-empty">네 번째 서술자 모듈을 불러오지 못했습니다.</div>';
+    gapBox.innerHTML = '';
+    return;
+  }
+  let a;
+  try {
+    a = Narrator.analyzeEvent(event, AI_RECORDS, FOURTH_DATA);
+  } catch (e) {
+    console.error('네 번째 서술자 분석 오류:', e);
+    box.innerHTML = '<div class="shared-empty">분석 중 문제가 생겼습니다.</div>';
+    gapBox.innerHTML = '';
+    return;
+  }
+  box.innerHTML = renderFourthNarrator(event, a);
+  gapBox.innerHTML = renderMemoryGaps(a);
+}
+
+function fourthQuestionsHtml(eventId, open) {
+  const q = FOURTH_DATA.questions[eventId] || {};
+  const items = Narrator.AI_LANGS.filter(l => q[l]).map(l => `
+    <li class="fourth-q"><span class="fourth-q__lang">${Narrator.AI_LANG_LABEL[l]}</span><span lang="${AI_HTML_LANG[l]}">${escapeHtml(q[l])}</span></li>`).join('');
+  return `
+    <details class="more-box fourth-questions"${open ? ' open' : ''}>
+      <summary class="more-box__summary">AI에게 보낸 질문 원문 보기</summary>
+      <p class="nlp-desc">질문에는 사건 이름을 넣지 않고 연도와 사실로만 사건을 가리켰습니다. AI가 어떤 이름으로 부르는지도 관찰하기 위해서입니다.
+        세 언어의 뜻을 같게 맞추었고, 언어마다 새 대화에서 같은 질문을 여러 번 묻습니다.</p>
+      <ol class="fourth-q-list">${items}</ol>
+    </details>`;
+}
+
+function renderFourthNarrator(event, a) {
+  const ai = a.narrators.filter(n => n.kind === 'ai');
+  if (!ai.length) {
+    return `
+      <section class="fourth-section">
+        <h4 class="section-h section-h--small">네 번째 서술자 — AI의 서술</h4>
+        <div class="fourth-empty">
+          <strong>아직 기록 전입니다.</strong>
+          <p>같은 질문을 AI에게 한국어·일본어·중국어로 여러 번 물은 뒤, 답변을 모델 이름·날짜와 함께 이곳에 공개합니다.
+            답변을 지어 넣지 않기 위해, 기록이 준비될 때까지는 질문만 보여줍니다. 아래 ‘기억의 빈자리’는 지금 세 나라 요약 서술만으로 계산됩니다.</p>
+        </div>
+        ${fourthQuestionsHtml(event.id, true)}
+      </section>`;
+  }
+  const rowsFor = key => a.rows.filter(r => r.cells[key] && r.cells[key].present);
+  const cards = ai.map(n => {
+    const recs = n.records;
+    const chosen = recs.find(r => r.run === fourthRunChoice[n.lang]) || recs[0];
+    const runButtons = recs.length > 1 ? `
+      <div class="fourth-runs" role="group" aria-label="${escapeAttr(n.label)} 답변 회차">
+        ${recs.map(r => `<button type="button" class="fourth-runs__btn${r === chosen ? ' is-active' : ''}" data-ai-lang="${n.lang}" data-ai-run="${r.run}" aria-pressed="${r === chosen}">${r.run}회</button>`).join('')}
+      </div>` : '';
+    const names = a.names.byNarrator[n.key] || [];
+    const namesHtml = names.length
+      ? names.map(x => `<span class="narrative-card__keyword">${escapeHtml(x.label)} <small>${x.runs}회 중 ${x.hits}회</small></span>`).join('')
+      : '<span class="nlp-meta">사건 이름 목록에 있는 이름이 나오지 않았습니다</span>';
+    const elements = rowsFor(n.key).slice(0, 8)
+      .map(r => `<span class="nlp-chip nlp-chip--static">${escapeHtml(r.label)}<small>${r.cells[n.key].hits}/${r.cells[n.key].runs}</small></span>`).join('');
+    const translation = chosen.translationKo ? `
+      <details class="fourth-card__translation">
+        <summary>한국어 참고 번역 (AI 번역)</summary>
+        <p>${escapeHtml(chosen.translationKo)}</p>
+      </details>` : '';
+    const date = formatSharedDate(chosen.collectedAt);
+    return `
+      <article class="fourth-card">
+        <header class="fourth-card__head">
+          <span class="fourth-card__mark" aria-hidden="true">AI</span>
+          <div><div class="fourth-card__title">${escapeHtml(n.label)}</div>
+            <div class="nlp-meta">같은 질문 ${recs.length}회 · 지금 보는 답변 ${chosen.run}회차</div></div>
+        </header>
+        ${runButtons}
+        <p class="fourth-card__answer" lang="${AI_HTML_LANG[n.lang]}">${escapeHtml(chosen.answer)}</p>
+        ${translation}
+        <div class="narrative-card__label">부른 이름</div>
+        <div class="narrative-card__keywords">${namesHtml}</div>
+        <div class="narrative-card__label">자주 나온 요소 <small class="nlp-meta">(물은 횟수 중 나온 횟수)</small></div>
+        <div class="nlp-chips">${elements || '<span class="nlp-meta">개념 사전과 일치하는 요소가 없습니다</span>'}</div>
+        <p class="fourth-card__meta">모델 ${escapeHtml(chosen.model)}${chosen.servedByFallback ? ' (처음 요청한 모델이 답하지 않아 대체 모델이 답함)' : ''}${date ? ` · ${escapeHtml(date)} 수집` : ''} · 시스템 지시 없이 새 대화에서 질문</p>
+      </article>`;
+  }).join('');
+  const notes = ((FOURTH_DATA.observations || {})[event.id] || []);
+  const notesHtml = notes.length ? `
+    <div class="fourth-observe">
+      <div class="narrative-card__label">편집자 관찰 <small class="nlp-meta">(사람이 답변을 읽고 쓴 관찰 — 판정이 아닙니다)</small></div>
+      <ul>${notes.map(t => `<li>${escapeHtml(t)}</li>`).join('')}</ul>
+    </div>` : '';
+  return `
+    <section class="fourth-section">
+      <h4 class="section-h section-h--small">네 번째 서술자 — AI의 서술</h4>
+      <div class="fourth-grid">${cards}</div>
+      ${notesHtml}
+      ${fourthQuestionsHtml(event.id, false)}
+    </section>`;
+}
+
+function gapCellHtml(row, n) {
+  const c = row.cells[n.key];
+  const multi = c.runs > 1;
+  const state = c.present ? 'present' : (c.gap ? 'gap' : 'absent');
+  const mark = c.present ? '●' : '○';
+  const count = multi ? `<small>${c.hits}/${c.runs}</small>` : '';
+  const said = c.forms.length ? ` · 찾은 표현: ${c.forms.join(', ')}` : '';
+  const stateText = c.present ? '있음' : (c.gap ? '빈자리 — 다른 서술자 대부분에게는 있음' : '없음');
+  const title = `${NARRATOR_SHORT[n.key] || n.label}: ${stateText}${multi ? ` (${c.runs}회 중 ${c.hits}회)` : ''}${said}`;
+  return `<td class="gap-cell gap-cell--${state}" title="${escapeAttr(title)}"><span aria-hidden="true">${mark}</span>${count}<span class="sr-only">${escapeHtml(stateText)}${multi ? `, ${c.runs}회 중 ${c.hits}회` : ''}</span></td>`;
+}
+
+function renderMemoryGaps(a) {
+  const heads = a.narrators.map(n => {
+    const dot = n.kind === 'nation' ? `<i class="dot dot--${n.key}" aria-hidden="true"></i>` : '';
+    return `<th scope="col"${n.kind === 'ai' ? ' class="gap-col--ai"' : ''}>${dot}${escapeHtml(NARRATOR_SHORT[n.key] || n.label)}</th>`;
+  }).join('');
+  const focusRows = a.rows.filter(r => r.kind === 'focus');
+  const conceptRows = a.rows.filter(r => r.kind === 'concept');
+  const rowHtml = r => `
+    <tr class="${r.gapKeys.length ? 'has-gap' : ''}">
+      <th scope="row">${escapeHtml(r.label)}</th>
+      ${a.narrators.map(n => gapCellHtml(r, n)).join('')}
+    </tr>`;
+  const groupRow = text => `<tr class="gap-group"><th scope="rowgroup" colspan="${a.narrators.length + 1}">${text}</th></tr>`;
+  const body = (focusRows.length ? groupRow('이 사건에서 꼭 확인할 요소 (편집자 선정)') + focusRows.map(rowHtml).join('') : '')
+    + (conceptRows.length ? groupRow('개념 사전으로 찾은 요소') + conceptRows.map(rowHtml).join('') : '');
+
+  const key = (a.keyGaps || []).map(g => {
+    const row = a.rows.find(r => r.id === g.element);
+    return `<li class="gap-summary__item gap-summary__item--key"><strong>${escapeHtml(NARRATOR_SHORT[g.narrator] || g.narrator)}</strong>에는 ‘${escapeHtml(row ? row.label : g.element)}’이(가) 없습니다.${g.note ? ` <span class="nlp-meta">${escapeHtml(g.note)}</span>` : ''}</li>`;
+  }).join('');
+  const keyIds = (a.keyGaps || []).map(g => g.element + '|' + g.narrator);
+  const auto = a.gaps.filter(g => keyIds.indexOf(g.rowId + '|' + g.narrator) < 0).slice(0, 4).map(g =>
+    `<li class="gap-summary__item"><strong>${escapeHtml(NARRATOR_SHORT[g.narrator] || g.narratorLabel)}</strong>에는 ‘${escapeHtml(g.element)}’이(가) 없습니다. <span class="nlp-meta">(다른 서술자 ${g.presentIn}곳에는 있음)</span></li>`).join('');
+  const summary = (key || auto)
+    ? `<ul class="gap-summary">${key}${auto}</ul>`
+    : '<p class="nlp-desc">지금 비교한 서술자들 사이에서는 계산 기준에 맞는 빈자리가 보이지 않았습니다.</p>';
+
+  return `
+    <section class="fourth-section gaps">
+      <h4 class="section-h section-h--small">기억의 빈자리</h4>
+      <p class="nlp-desc gaps__lead">무엇을 말했는지보다 <strong>무엇을 말하지 않았는지</strong>를 봅니다.
+        다른 서술자 대부분에게는 있는데 한 서술자에게만 없는 요소를 ‘빈자리’로 표시합니다.
+        ${a.hasAi ? '' : '지금은 AI 기록이 없어 세 나라 요약 서술만 비교합니다.'}</p>
+      ${summary}
+      <div class="gap-table-wrap" tabindex="0" role="region" aria-label="요소별로 서술자에게 있는지 보여주는 표">
+        <table class="gap-table">
+          <thead><tr><th scope="col">요소</th>${heads}</tr></thead>
+          <tbody>${body}</tbody>
+        </table>
+      </div>
+      <p class="gap-legend"><span class="gap-legend__item"><b class="gap-legend__present">●</b> 있음</span>
+        <span class="gap-legend__item"><b class="gap-legend__absent">○</b> 없음</span>
+        <span class="gap-legend__item"><b class="gap-legend__gap">○</b> 빈자리 (다른 서술자 대부분에게는 있음)</span>
+        ${a.hasAi ? '<span class="gap-legend__item">AI 칸의 숫자 = 물은 횟수 중 나온 횟수 (절반 이상이면 있음)</span>' : ''}</p>
+      <details class="ai-result__section nlp-method">
+        <summary class="ai-result__heading"><span>?</span><span>빈자리는 어떻게 계산하나요? (한계)</span></summary>
+        <ul class="ai-result__list">
+          <li><strong>요소</strong>: 편집자가 사건마다 고른 확인 요소와, 공동 표현 분석에 쓰는 다국어 개념 사전(${Analyzer.CONCEPTS.length}개 개념)입니다. 한국어·일본어·중국어 표현을 함께 찾습니다.</li>
+          <li><strong>빈자리 기준</strong>: 이 서술자에게는 없고, 다른 서술자 가운데 2곳 이상이면서 절반 이상에게 있는 요소입니다.</li>
+          <li><strong>AI 답변</strong>: 같은 질문을 여러 번 물었으므로, 절반 이상의 답변에 나오면 ‘있음’으로 봅니다.</li>
+          <li><strong>한계</strong>: 사전에 없는 표현·비유는 찾지 못하고, 부정문(“침략이 아니다”)도 언급으로 셉니다. 세 나라 서술은 편집자가 쓴 짧은 요약입니다.
+            빈자리는 “덜 언급했다”는 관찰일 뿐, 왜곡이나 의도를 뜻하지 않습니다.</li>
+        </ul>
+      </details>
+    </section>`;
+}
+
+/* ------------------------------------------------------------
    탐구 4단계 (STEP 1/4 ~ 4/4)
    1 내가 알고 있는 역사 → 2 세 나라 기록·NLP 비교 → 3 새로운 관점과 나의 최종 표현 → 4 My Memory Card
    · 단계 이동을 막거나 잠그지 않습니다. 진행 표시의 단계 버튼·탭으로 언제든 오갈 수 있습니다.
@@ -333,7 +522,7 @@ const EXPLORE_STEPS = [
     todo: '카드 내용을 확인하고 이미지로 저장하세요. 발견한 관점과 남은 질문은 아래에서 다듬을 수 있어요.' }
 ];
 /* 탭 → 탐구 단계 (탭은 각 단계의 '자세히 보기' 역할) */
-const TAB_STEP = { compare: 2, ai: 2, keywords: 2, sources: 2, shared: 3, memory: 3 };
+const TAB_STEP = { compare: 2, fourth: 2, ai: 2, keywords: 2, sources: 2, shared: 3, memory: 3 };
 const COMPARE_DWELL_MS = 5000;        // 국가별 서술이 화면에 이만큼 보이면 "서술 확인"으로 기록
 
 let flow = null;
@@ -3783,6 +3972,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const prior = e.target.closest('[data-prior-value]');
     if (prior) { handlePriorAnswer(prior.dataset.priorValue); return; }
     if (e.target.closest('[data-prior-action="edit"]')) { priorEditing = true; renderBeforeCard(); return; }
+    const aiRun = e.target.closest('[data-ai-run]');
+    if (aiRun) { fourthRunChoice[aiRun.dataset.aiLang] = Number(aiRun.dataset.aiRun); renderFourthTab(currentEvent()); return; }
     const stepGoto = e.target.closest('[data-step-goto]');
     if (stepGoto) { gotoStep(stepGoto.dataset.stepGoto); return; }
     if (e.target.closest('[data-step-back]')) { gotoStep(exploreStep - 1); return; }

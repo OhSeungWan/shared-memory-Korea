@@ -4,9 +4,11 @@
   "description": "Shared Memory Project — 동북아 역사 서술 비교 플랫폼 (정적 사이트, 빌드 불필요)",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "test:e2e": "node tests/e2e/run-all.js"
+    "test:e2e": "node tests/e2e/run-all.js",
+    "collect:ai": "node tools/collect-ai-narratives.mjs"
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "0.135.0",
     "playwright": "1.56.1"
   }
 }

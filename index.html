@@ -244,10 +244,11 @@
         <!-- JS가 채워줍니다 -->
       </div>
 
-      <!-- 탭 메뉴: 서술 비교 → NLP 분석 → 키워드 → 사료 → 공동 표현 → 공동 기억 지도
+      <!-- 탭 메뉴: 서술 비교 → 네 번째 서술자(AI) → NLP 분석 → 키워드 → 사료 → 공동 표현 → 공동 기억 지도
            화면에는 "학생이 할 일"을 먼저, 기술 이름은 작은 글씨로 함께 보여줍니다. data-tab 값은 그대로입니다. -->
       <div class="tabs">
         <button class="tab active" data-tab="compare">세 나라의 서술<small class="tab__sub">국가별 서술</small></button>
+        <button class="tab" data-tab="fourth">AI는 어떻게 말할까?<small class="tab__sub">네 번째 서술자</small></button>
         <button class="tab" data-tab="ai">어떻게 다를까?<small class="tab__sub">NLP 비교 분석</small></button>
         <button class="tab" data-tab="keywords">단어 빈도<small class="tab__sub">키워드 비교</small></button>
         <button class="tab" data-tab="sources">사료로 확인<small class="tab__sub">관련 사료</small></button>
@@ -283,6 +284,13 @@
           </div>
         </details>
 
+        <!-- 네 번째 서술자로 이어지는 안내 (탭 이동을 강제하지 않음) -->
+        <button type="button" class="fourth-cta" data-goto-tab="fourth">
+          <span class="fourth-cta__kicker">네 번째 서술자</span>
+          <strong class="fourth-cta__q">같은 질문을 AI에게 물으면, AI는 이 역사를 어떻게 말할까요?</strong>
+          <span class="fourth-cta__go">AI의 서술과 기억의 빈자리 보기 →</span>
+        </button>
+
         <!-- 더 깊이 보기 (탭 이동을 강제하지 않음) -->
         <div class="deeper">
           <p class="deeper__label">더 깊이 살펴보기 <small>(선택)</small></p>
@@ -292,6 +300,22 @@
             <button type="button" class="deeper__link" data-goto-tab="sources"><strong>사료로 확인</strong><span>관련 자료·확인 상태</span></button>
           </div>
         </div>
+      </div>
+
+      <!-- 탭: 네 번째 서술자 · 기억의 빈자리 (narrator-analysis.js)
+           AI 답변은 실시간으로 묻지 않고 ai-narratives-data.js에 기록된 것만 보여줍니다. 기록이 없으면 '기록 전'과 질문 원문만 표시합니다. -->
+      <div class="tab-content" data-tab-content="fourth">
+        <div class="step-head">
+          <p class="step-head__kicker">STEP 2 · 네 번째 서술자</p>
+          <h3 class="step-head__q">AI는 이 역사를 <span class="hl-ink">어떻게</span> 말할까요?</h3>
+          <p class="step-head__desc">요즘은 역사를 AI에게 묻기도 합니다. 같은 질문을 한국어·일본어·중국어로 AI에게 물었을 때의 답을, 세 나라의 서술처럼 비판적으로 읽어 보세요.</p>
+        </div>
+        <p class="scope-note">
+          <strong>읽기 전에</strong> AI의 답은 정답이 아니라 또 하나의 서술입니다. 아래 답변은 실시간으로 묻지 않고, 어떤 모델에 언제 어떤 질문으로 물었는지 함께 기록해 둔 것입니다.
+          특정 날짜·모델의 기록이므로 ‘AI 전체’의 생각을 대표하지 않습니다.
+        </p>
+        <div id="fourthNarrator"><!-- JS --></div>
+        <div id="memoryGaps"><!-- JS --></div>
       </div>
 
       <!-- 탭 2: NLP 비교 분석 (nlp-analyzer.js가 서술 텍스트로부터 직접 계산) -->
@@ -710,6 +734,9 @@
   <script src="./contribution-guide.js"></script>
   <script src="./nlp-analyzer.js"></script>
   <script src="./shared-memory-analyzer.js"></script>
+  <script src="./fourth-narrator-data.js"></script>
+  <script src="./ai-narratives-data.js"></script>
+  <script src="./narrator-analysis.js"></script>
   <script src="./generation-analysis.js"></script>
   <script src="./memory-map.js"></script>
   <script src="./shared-store.js"></script>
