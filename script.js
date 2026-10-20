@@ -155,9 +155,9 @@ function openEventDetail(eventId) {
   `;
 
   const countries = [
-    { key: 'korea', name: '한국', en: 'KOREA', flag: '韓', titleField: event.title },
-    { key: 'japan', name: '일본', en: 'JAPAN', flag: '日', titleField: event.titleJP },
-    { key: 'china', name: '중국', en: 'CHINA', flag: '中', titleField: event.titleCN }
+    { key: 'korea', name: '한국', en: 'KOREA', flag: '韓', titleField: event.title, lang: 'ko' },
+    { key: 'japan', name: '일본', en: 'JAPAN', flag: '日', titleField: event.titleJP, lang: 'ja' },
+    { key: 'china', name: '중국', en: 'CHINA', flag: '中', titleField: event.titleCN, lang: 'zh-Hans' }
   ];
 
   document.getElementById('narrativesGrid').innerHTML = countries.map(c => {
@@ -168,7 +168,7 @@ function openEventDetail(eventId) {
           <div class="narrative-card__flag-mark">${c.flag}</div>
           <div>
             <div class="narrative-card__country">${c.name} <small class="narrative-card__scope">측 요약 서술</small></div>
-            <div class="narrative-card__country-en">${c.en} · ${c.titleField}</div>
+            <div class="narrative-card__country-en">${c.en} · <span lang="${c.lang}">${escapeHtml(c.titleField || '')}</span></div>
           </div>
         </div>
         <h4 class="narrative-card__title">${n.title}</h4>
@@ -1020,9 +1020,9 @@ function renderCompareSummary(event) {
       <span class="hl-legend__note">형광펜은 세 서술 텍스트에서 자동 계산(NLP)된 단어에만 표시되며, 중요도나 옳고 그름을 뜻하지 않습니다.</span>` : '';
   }
   const names = [
-    { key: 'korea', flag: '韓', name: '한국', title: event.title },
-    { key: 'japan', flag: '日', name: '일본', title: event.titleJP },
-    { key: 'china', flag: '中', name: '중국', title: event.titleCN }
+    { key: 'korea', flag: '韓', name: '한국', title: event.title, lang: 'ko' },
+    { key: 'japan', flag: '日', name: '일본', title: event.titleJP, lang: 'ja' },
+    { key: 'china', flag: '中', name: '중국', title: event.titleCN, lang: 'zh-Hans' }
   ].filter(x => x.title);
   const chips = (list, country) => list.length
     ? list.map(t => `<button type="button" class="nlp-chip${country ? ` nlp-chip--${country}` : ''}" data-glance-term="${escapeAttr(t)}" title="세 서술에서 쓰인 위치 보기">${escapeHtml(t)}</button>`).join('')
@@ -1030,7 +1030,7 @@ function renderCompareSummary(event) {
   const namesCard = new Set(names.map(x => x.title)).size >= 2 ? `
     <article class="sum-card sum-card--names">
       <h4 class="sum-card__title"><span class="sum-card__kicker">사건 이름</span>같은 사건, 서로 다른 이름</h4>
-      <ul class="sum-card__names">${names.map(x => `<li><span class="sum-card__flag sum-card__flag--${x.key}" aria-hidden="true">${x.flag}</span><span class="sr-only">${x.name}: </span><strong>${escapeHtml(x.title)}</strong></li>`).join('')}</ul>
+      <ul class="sum-card__names">${names.map(x => `<li><span class="sum-card__flag sum-card__flag--${x.key}" aria-hidden="true">${x.flag}</span><span class="sr-only">${x.name}: </span><strong lang="${x.lang}">${escapeHtml(x.title)}</strong></li>`).join('')}</ul>
     </article>` : '';
   if (!g) {
     box.innerHTML = namesCard ? `<div class="compare-sum__grid">${namesCard}</div>` : '';
@@ -2362,7 +2362,7 @@ function renderSharedList() {
           <div class="shared-item__date">${escapeHtml(item.date || '')}</div>
         </div>
 
-        <div class="shared-item__text">"${escapeHtml(item.text)}"</div>
+        <div class="shared-item__text"${textLangAttr(item.lang)}>"${escapeHtml(item.text)}"</div>
         ${item.before ? `<div class="shared-item__before"><span class="shared-item__label">탐구 전</span> “${escapeHtml(item.before)}”</div>` : ''}
         ${concepts}
         ${reasonHtml}
@@ -2495,7 +2495,7 @@ function renderArchive() {
         </button>` : '';
       return `
         <article class="shared-item archive-card" data-expression-id="${id}">
-          <div class="shared-item__text">"${escapeHtml(item.text)}"</div>
+          <div class="shared-item__text"${textLangAttr(item.lang)}>"${escapeHtml(item.text)}"</div>
           <div class="shared-item__header">
             <div class="shared-item__user">
               ${escapeHtml(item.user)}
@@ -2580,6 +2580,13 @@ const LANG_BADGES = {
   en: { flag: 'EN', label: 'English' },
   unknown: { flag: '?', label: '미식별' }
 };
+
+/** 참여자 문장의 언어를 HTML lang 속성으로 (일본어·중국어 서체가 적용되도록). 한국어·알 수 없음은 페이지 기본(ko) */
+function textLangAttr(code) {
+  const map = { ja: 'ja', zh: 'zh-Hans', en: 'en' };
+  const c = String(code || '').toLowerCase();
+  return map[c] ? ` lang="${map[c]}"` : '';
+}
 
 function getLangBadge(code) {
   const key = typeof code === 'string' ? code.toLowerCase() : 'unknown';
@@ -2983,7 +2990,7 @@ function renderMemoryMapSection(a) {
 function expressionQuote(item, extra) {
   return `
     <li class="cluster-member">
-      <span class="cluster-member__text">“${escapeHtml(item.text)}”</span>
+      <span class="cluster-member__text"${textLangAttr(item.lang)}>“${escapeHtml(item.text)}”</span>
       <span class="nlp-meta">— ${escapeHtml(item.user || '익명')} · ${getLangBadge(item.lang).label}${extra || ''}</span>
     </li>`;
 }
@@ -3009,7 +3016,7 @@ function renderMemoryClusters(a) {
           ${conceptChips ? `<div class="nlp-chips cluster-card__concepts">${conceptChips}</div>` : ''}
         </div>
         <blockquote class="cluster-card__quote">
-          “${escapeHtml(rep.text)}”
+          <span class="cluster-card__quote-text"${textLangAttr(rep.lang)}>“${escapeHtml(rep.text)}”</span>
           <cite>— ${escapeHtml(rep.user || '익명')} · 표현군의 다른 제안들과 가장 비슷한 제안 (우수작·정답이 아님)</cite>
         </blockquote>
         <div class="nlp-meta">${langs} · 표현군 안 평균 텍스트 유사도 ${formatNum(c.cohesion)}</div>
