@@ -3441,6 +3441,7 @@ function renderCardPreview() {
   const share = document.querySelector('[data-card-action="share"]');
   if (share) share.hidden = !(navigator.share && navigator.canShare);
   scheduleCardArt();
+  ensureCardFonts(m, cardState.theme, 'feed').then(scheduleCardArt);
   if (cardState.format === 'story') renderStoryPreview();
 }
 
@@ -3461,6 +3462,8 @@ function applyCardTheme(box) {
   const vars = {
     '--ink': C.ink, '--ink-soft': C.soft, '--ink-mute': C.mute, '--line': C.line, '--accent': C.accent,
     '--mc-bg': C.bg, '--mc-paper': C.paper, '--mc-seal': C.seal || C.accent, '--mc-on-accent': C.onAccent,
+    '--mc-font-title': t.fonts.title.family, '--mc-title-weight': String(t.fonts.title.weight),
+    '--mc-font-quote': t.fonts.quote.family, '--mc-quote-weight': String(t.fonts.quote.weight),
     '--mc-top': (t.feed.top / 1080).toFixed(4), '--mc-side': (t.feed.side / 1080).toFixed(4), '--mc-bottom': (t.feed.bottom / 1080).toFixed(4)
   };
   Object.keys(vars).forEach(k => box.style.setProperty(k, vars[k]));
@@ -3602,34 +3605,30 @@ function renderStoryPreview() {
     } catch (e) { console.error('스토리 미리보기 오류:', e); }
   };
   draw();
-  cardFontsReady().then(draw);
+  ensureCardFonts(cardState.model, cardState.theme, 'story').then(draw);
 }
 
-let cardFontsPromise = null;
-/** 웹 글꼴이 준비된 뒤에 그려야 이미지의 글꼴이 화면과 같습니다. (불러오지 못하면 2.5초 뒤 기본 글꼴로) */
-function cardFontsReady() {
-  if (!cardFontsPromise) {
-    cardFontsPromise = (async () => {
-      try {
-        if (document.fonts && document.fonts.load) {
-          await Promise.race([
-            Promise.all([
-              document.fonts.load("900 64px 'Noto Serif KR'"), document.fonts.load("700 40px 'Noto Serif KR'"),
-              document.fonts.load("400 28px 'Noto Sans KR'"), document.fonts.load("600 28px 'Cormorant Garamond'")
-            ]),
-            new Promise(r => setTimeout(r, 2500))
-          ]);
-        }
-      } catch (e) { /* 기본 글꼴 */ }
-    })();
-  }
-  return cardFontsPromise;
+/**
+ * 카드 그림에 쓸 서체를 실제로 그릴 글자와 함께 불러옵니다. (테마별 서체 조합 · Memory Card fontLoads)
+ * 글자 범위별로 나뉜 웹폰트(Google Fonts·Pretendard)는 글자를 넘겨야 한글·한자 조각까지 받습니다.
+ * 불러오지 못하면(학교망 차단 등) 3초 뒤 기기 기본 서체로 그립니다.
+ */
+async function ensureCardFonts(model, themeId, format) {
+  try {
+    if (!document.fonts || !document.fonts.load || !Card || !Card.fontLoads) return;
+    const reqs = Card.fontLoads(model || cardState.model || currentCardModel(), { theme: themeId || cardState.theme, format: format || cardState.format });
+    await Promise.race([
+      Promise.all(reqs.map(r => document.fonts.load(r.font, r.text).catch(() => []))),
+      new Promise(r => setTimeout(r, 3000))
+    ]);
+  } catch (e) { /* 기본 서체 */ }
 }
 
 async function cardCanvas() {
   const canvas = document.createElement('canvas');
-  await cardFontsReady();
-  const info = Card.drawCard(canvas, cardState.model || currentCardModel(), { theme: cardState.theme, format: cardState.format });
+  const model = cardState.model || currentCardModel();
+  await ensureCardFonts(model, cardState.theme, cardState.format);
+  const info = Card.drawCard(canvas, model, { theme: cardState.theme, format: cardState.format });
   return { canvas, info };
 }
 
@@ -4106,7 +4105,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // 화면 카드 크기가 바뀌면(글자 입력·화면 회전) 그림을 다시 맞춥니다.
   const cardBox = document.getElementById('memoryCard');
   if (cardBox && window.ResizeObserver) new ResizeObserver(() => { if (cardBox.innerHTML) scheduleCardArt(); }).observe(cardBox);
-  cardFontsReady().then(() => { if (document.querySelector('.page--card.active')) scheduleCardArt(); });
+  // 처음 열 때 서체가 늦게 도착하면(장식 속 한자·인장) 그림을 다시 그립니다.
+  if (document.fonts && document.fonts.addEventListener) {
+    document.fonts.addEventListener('loadingdone', () => { if (document.querySelector('.page--card.active') && cardState.model) scheduleCardArt(); });
+  }
   document.getElementById('customDiscovery')?.addEventListener('input', e => {
     cardState.custom = e.target.value;
     clearTimeout(cardDraftTimer);

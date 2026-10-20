@@ -118,12 +118,11 @@ h1, h2, h3, h4 {
   word-break: keep-all;
 }
 
-/* 메인 타이틀 · 큰 제목: 마루부리 (굵기 하나뿐이라 가짜 굵게 만들기를 끔) */
+/* 메인 타이틀 · 큰 제목: 마루부리 Bold (서체를 못 불러오면 Noto Serif KR → 기기 명조로, 굵기는 그대로) */
 h1, h2,
 .hero__title, .page__title, .detail__title, .archive__title, .compare-sum__title {
   font-family: var(--font-display);
   font-weight: 700;
-  font-synthesis: none;
   letter-spacing: var(--ls-tight);
 }
 
@@ -2600,7 +2599,7 @@ body.has-participant-gate { overflow: hidden; }
 .memory-card__no { font-size: var(--fs-xs); color: var(--ink-mute); letter-spacing: var(--ls-wide); white-space: nowrap; }
 .memory-card__event { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
 .memory-card__era { font-family: var(--font-latin); color: var(--accent); font-size: var(--fs-md); }
-.memory-card__title { font-size: 1.9rem; font-weight: 900; line-height: var(--lh-tight); }
+.memory-card__title { font-family: var(--mc-font-title, var(--font-serif)); font-size: 1.9rem; font-weight: var(--mc-title-weight, 700); line-height: var(--lh-tight); }
 .memory-card__seal {
   flex: none; width: 3.4rem; height: 3.4rem;
   display: flex; align-items: center; justify-content: center;
@@ -2618,7 +2617,8 @@ body.has-participant-gate { overflow: hidden; }
 .memory-card__label { font-family: var(--font-ui); font-size: var(--fs-2xs); font-weight: 500; color: var(--accent); letter-spacing: var(--ls-wide); margin-bottom: 0.35rem; }
 .memory-card__quote { font-family: var(--font-quote); line-height: var(--lh-text); margin: 0; white-space: pre-line; }
 .memory-card__quote--before { color: var(--ink-soft); font-size: var(--fs-base); }
-.memory-card__quote--after { font-weight: 700; font-size: 1.3rem; }
+.memory-card__quote { font-family: var(--mc-font-quote, var(--font-quote)); }
+.memory-card__quote--after { font-weight: var(--mc-quote-weight, 700); font-size: 1.3rem; }
 .memory-card__quote--after.tier-medium { font-size: var(--fs-xl); }
 .memory-card__quote--after.tier-long { font-size: var(--fs-base); }
 .memory-card__quote--after.tier-xlong { font-size: var(--fs-md); font-weight: 500; }
@@ -3416,7 +3416,7 @@ mark.hl--distinct {
 .hero-names__item { font-weight: 500; }
 .hero-card__event strong { font-weight: 700; }
 .hero-card__quote { font-weight: 500; }
-.memory-card__title { font-weight: 700; }
+.memory-card__title { font-weight: var(--mc-title-weight, 700); }   /* 테마별 서체 조합 (card-themes.js fonts) */
 
 /* 사건 고르기 화면 톤으로 통일 (2026-10): 명조 700 · 붉은 한자색 · 베이지 둥근 태그 · 베이지 띠 카드 */
 /* ② 첫 화면 강조: 노란 형광펜 대신 사건 카드 한자와 같은 붉은 먹색 */

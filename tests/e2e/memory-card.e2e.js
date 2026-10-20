@@ -103,7 +103,16 @@ run('memory-card', async ({ browser, base, check, mockPage }) => {
   check('인스타 스토리: 미리보기 표시 · 저장 버튼 문구 바뀜', await page.isVisible('#storyCanvas') && !(await page.isVisible('#memoryCard')) &&
     /스토리 이미지 저장/.test(await page.textContent('[data-card-action="png"]')) && await page.isVisible('#cardStoryHint'));
   check('스토리 미리보기 대체 텍스트에 탐구 후 문장 전체', (await page.getAttribute('#storyCanvas', 'aria-label')).includes(AFTER));
+  await page.evaluate(() => {
+    window.__fontCalls = [];
+    const orig = document.fonts.load.bind(document.fonts);
+    document.fonts.load = (f, t) => { window.__fontCalls.push([f, t || '']); return orig(f, t); };
+  });
   const story = await downloadPng(page);
+  const fontCalls = await page.evaluate(() => window.__fontCalls);
+  check('이미지 저장 전 테마 서체를 실제로 그릴 글자와 함께 불러옴 (청록산수: 고운바탕 문장 · Noto Serif SC 인장)',
+    fontCalls.some(([f, t]) => /Gowun Batang/.test(f) && [...'재일조선인차별'].every(ch => t.includes(ch))) &&
+    fontCalls.some(([f]) => /Noto Serif SC/.test(f)) && fontCalls.some(([f]) => /Pretendard/.test(f)), JSON.stringify(fontCalls.map(c => c[0].slice(0, 30))));
   check('스토리 이미지: 1080×1920 PNG (9:16)', story.info.png && story.info.width === 1080 && story.info.height === 1920, JSON.stringify(story));
   check('스토리 파일 이름', /^shared-memory-card-zainichi-\d{8}-sansu-story\.png$/.test(story.name), story.name);
   check('모바일: 가로 스크롤 없음 (스토리 미리보기)', await noHScroll(page));

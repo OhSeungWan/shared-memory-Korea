@@ -148,3 +148,72 @@ test('저작권: 장식은 코드로 직접 그린 창작 그림 — 외부 이�
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   assert.ok(html.indexOf('card-themes.js') > 0 && html.indexOf('card-themes.js') < html.indexOf('memory-card.js'), 'card-themes.js를 memory-card.js보다 먼저 불러옴');
 });
+
+/* ---------- 서체 (타이포그래피) ---------- */
+
+const familyNames = stack => (String(stack).match(/'([^']+)'/g) || []).map(x => x.slice(1, -1));
+
+test('서체: 테마별 조합 — 제목·문장은 Noto Serif KR / 고운바탕, 장식 한자는 테마에 맞는 서체', () => {
+  const first = f => familyNames(f.family)[0];
+  const expect = {
+    archive: ['Noto Serif KR', 'Gowun Batang', 'Noto Serif KR'],
+    minhwa: ['Gowun Batang', 'Gowun Batang', 'Noto Serif KR'],
+    ukiyoe: ['Noto Serif KR', 'Noto Serif KR', 'Zen Old Mincho'],
+    sansu: ['Noto Serif KR', 'Gowun Batang', 'Noto Serif SC'],
+    classic: ['Noto Serif KR', 'Noto Serif KR', 'Noto Serif KR']
+  };
+  Themes.ORDER.forEach(id => {
+    const f = Themes.fontsOf(id);
+    assert.deepEqual([first(f.title), first(f.quote), first(f.ornament)], expect[id], id);
+    assert.equal(first(f.ui), 'Pretendard Variable');
+    assert.equal(first(f.latin), 'Cormorant Garamond');
+    // 불러오지 못해도 그려지도록 모든 서체 묶음은 일반 서체(serif/sans-serif)로 끝남
+    [f.title, f.quote, f.ui, f.latin, f.ornament].forEach(x => assert.match(x.family, /(sans-serif|serif)\s*$/));
+  });
+});
+
+test('서체: 카드 그림에 쓰는 서체는 모두 페이지가 공식 배포처에서 불러온다 (굵기 포함)', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const css = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
+  const gf = (html.match(/https:\/\/fonts\.googleapis\.com\/css2\?[^"]+/) || [''])[0];
+  const googleWeights = {};
+  gf.replace(/family=([^:&]+):(?:ital,)?wght@([^&]+)/g, (_, fam, w) => { googleWeights[decodeURIComponent(fam.replace(/\+/g, ' '))] = w.split(';').map(x => Number(x.split(',').pop())); });
+  assert.ok(/cdn\.jsdelivr\.net\/gh\/orioncactus\/pretendard@v[\d.]+\/dist\/web\/variable\/pretendardvariable-dynamic-subset\.min\.css/.test(html), 'Pretendard 공식 배포본');
+  assert.ok(/font-family: 'MaruBuri'[\s\S]*?hangeul\.pstatic\.net\/hangeul_static\/webfont\/MaruBuri\/MaruBuri-Bold\.woff2/.test(css), '마루부리 공식 웹폰트');
+  assert.ok(!/Noto\+Sans\+KR/.test(gf), 'Noto Sans KR은 Pretendard로 대체 (내려받는 파일 줄임)');
+  Themes.ORDER.forEach(id => {
+    const f = Themes.fontsOf(id);
+    [[f.title, f.title.weight], [f.quote, f.quote.weight], [f.ornament, f.ornament.max]].forEach(([x, w]) => {
+      const name = familyNames(x.family)[0];
+      assert.ok(googleWeights[name], `${id}: ${name}를 Google Fonts에서 불러옴`);
+      assert.ok(googleWeights[name].includes(w), `${id}: ${name} ${w} 굵기를 불러옴 (${googleWeights[name]})`);
+    });
+  });
+  assert.ok(/display=swap/.test(gf), '글꼴을 기다리는 동안 글자를 숨기지 않음 (display=swap)');
+});
+
+test('서체: 저장 전 불러올 목록에 테마 서체와 실제로 그릴 글자(탐구 전·후 문장)가 모두 들어간다', () => {
+  const m = model('같은 전쟁을 세 나라는 다르게 기억했다', '일본이 침략한 전쟁');
+  Themes.ORDER.forEach(id => {
+    const loads = Card.fontLoads(m, { theme: id, format: 'story' });
+    const f = Themes.fontsOf(id);
+    const families = loads.map(l => familyNames(l.font)[0]);
+    [f.title, f.quote, f.ui, f.latin, f.ornament].forEach(x => assert.ok(families.includes(familyNames(x.family)[0]), `${id}: ${x.family}`));
+    const quoteText = loads.filter(l => l.font.startsWith(`${f.quote.weight} `) && l.font.includes(f.quote.family)).map(l => l.text).join('');
+    for (const ch of '같은전쟁세나라다르게기억했일본침략') assert.ok(quoteText.includes(ch), `${id}: '${ch}'`);
+    loads.forEach(l => assert.ok(l.text.length > 0 && !/\s/.test(l.text), '빈 글자·공백 없음'));
+  });
+});
+
+test('서체: 카드 이미지의 탐구 후 문장은 테마의 문장 서체로 그려진다', () => {
+  Themes.ORDER.forEach(id => {
+    for (const format of ['feed', 'story']) {
+      const cv = fakeCanvas();
+      Card.drawCard(cv, model(SHORT, '처음 생각'), { theme: id, format });
+      const line = cv.texts.find(x => x.s.startsWith('“같은 전쟁'));
+      assert.ok(line.font.includes(Themes.fontsOf(id).quote.family), `${id} ${format}: ${line.font}`);
+      const title = cv.texts.find(x => x.s === imjin.title);
+      assert.ok(title && title.font.includes(Themes.fontsOf(id).title.family), `${id} ${format}: 제목 서체`);
+    }
+  });
+});
