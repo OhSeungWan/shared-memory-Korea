@@ -169,6 +169,49 @@ QR코드로 들어와 약 5분 동안 한 사건을 탐구하고, **자신의 �
 - 인스타그램 앱의 공유 시트 동작(스토리 바로 열기)은 기기·앱 버전에 따라 다릅니다. 실제 휴대폰에서 확인이 필요합니다.
 - 화면 카드의 그림은 휴대폰 폭에서 작게 보입니다(저장 이미지는 1080px 기준으로 선명). 인쇄 시 그림은 화면에서 그린 크기를 늘려 씁니다.
 
+### 3-4-2. 타이포그래피 — 동아시아 역사 아카이브 (2026-10)
+
+전통 동아시아 서체의 결을 살리되 붓글씨·과한 장식은 쓰지 않고, 역사 전시관처럼 단정한 명조 + 현대적인 고딕 UI로 정리했습니다. 기존 레이아웃·색은 그대로입니다.
+
+| 역할 | 서체 | 라이선스 · 공식 배포처 |
+|---|---|---|
+| 메인 타이틀 · 큰 제목 (`h1`, `h2`, 첫 화면·사건·페이지 제목) | **마루부리** Bold | SIL OFL 1.1 · 네이버 한글(hangeul.naver.com) 공식 웹폰트 서버 `hangeul.pstatic.net` |
+| 메뉴 · 버튼 · 안내 · 본문 | **Pretendard** (가변) | SIL OFL 1.1 · 공식 GitHub `orioncactus/pretendard` v1.3.9 배포본(jsDelivr), 다이내믹 서브셋 |
+| 카드 제목 · 서술 · 질문 | **Noto Serif KR** | SIL OFL 1.1 · Google Fonts |
+| 참여자의 문장 (공동 표현 · 카드 인용) | **고운바탕** | SIL OFL 1.1 · Google Fonts (디자이너 류양희) |
+| 일본어 (`lang="ja"`) | **Zen Old Mincho** | SIL OFL 1.1 · Google Fonts (디자이너 Yoshimichi Ohira) |
+| 중국어 간체 (`lang="zh-Hans"`) | **Noto Serif SC** | SIL OFL 1.1 · Google Fonts |
+| 영문 라벨 · 연도 | Cormorant Garamond (기존) | SIL OFL 1.1 · Google Fonts |
+
+**LXGW WenKai(霞鹜文楷)를 쓰지 않은 이유** — 라이선스(OFL 1.1)는 문제가 없지만, Google Fonts에는 번체판(LXGW WenKai TC, `chinese-traditional`)만 있습니다. 이 프로젝트의 중국어 콘텐츠는 간체(사건 이름 ‘万历朝鲜战争’, AI 답변, 참여자 문장)라 번체판으로는 일부 글자가 다른 서체로 섞여 보일 수 있습니다. 간체 웹폰트는 공식 경로가 아닌 개인 패키지로만 배포됩니다. 또 해서(楷書) 계열이라 ‘붓글씨 지양’ 방향과도 맞지 않아, 같은 명조 계열인 Noto Serif SC를 썼습니다.
+
+**정리한 것**
+- `style.css` 맨 위 `:root`에 서체 역할(`--font-display/serif/quote/ui/latin/ja/zh`), 글자 크기 7단계(`--fs-2xs` 12px ~ `--fs-xl` 18px), 행간(`--lh-*`), 자간(`--ls-*`) 변수를 두었습니다. 흩어진 크기 25종 311곳, 자간 29곳, 행간 63곳을 이 단계로 옮겼고, 가장 작은 글자를 10–11.5px에서 12px로 올렸습니다(모바일 가독성). 큰 제목(1.2rem 이상)은 기존 값을 유지했습니다.
+- 사건 이름(일·중), 공동 표현, 표현군 대표 문장에 `lang` 속성을 붙여 언어별 서체가 적용됩니다(기존 AI 답변 포함).
+- **Memory Card 테마별 서체 조합** (`card-themes.js`의 `fonts`, 화면 카드와 저장 이미지가 같음)
+
+  | 테마 | 제목 | 참여자 문장 | 장식 속 한자 |
+  |---|---|---|---|
+  | 고문서 | Noto Serif KR 700 | 고운바탕 | Noto Serif KR |
+  | 민화 화조도 | 고운바탕 | 고운바탕 | Noto Serif KR |
+  | 우키요에 | Noto Serif KR 900 (판화의 굵은 윤곽) | Noto Serif KR 700 | Zen Old Mincho (제목 칸 ‘共同記憶’) |
+  | 청록산수 | Noto Serif KR 500 (문인화처럼 가볍게) | 고운바탕 | Noto Serif SC (인장) |
+  | 기본 | Noto Serif KR 700 | Noto Serif KR 700 | Noto Serif KR |
+
+  안내·라벨은 Pretendard, 영문 라벨은 Cormorant Garamond로 모든 테마에 공통입니다.
+
+**이미지 저장 시 서체** — 이전에는 `document.fonts.load()`에 글자를 넘기지 않았습니다. Google Fonts·Pretendard는 글자 범위별로 파일이 나뉘어 있어, 이렇게 하면 영문 조각만 내려받고 한글·한자 조각은 빠질 수 있었습니다. 특히 화면 카드가 숨겨지는 스토리 모드에서는 이미지가 기본 서체로 그려질 수 있었습니다. 이제 `MemoryCard.fontLoads(model, { theme, format })`가 테마 서체와 **실제로 그릴 글자**를 함께 넘기고, 다 받은 뒤(최대 3초) 그립니다.
+
+**로딩 성능**
+- 서체 CSS(Pretendard, Google Fonts)를 **비동기로 불러와 화면 그리기를 막지 않습니다**(`media="print"` → `onload`, JS가 꺼져 있으면 `<noscript>`). 학교망처럼 서체 CDN이 응답하지 않는 상황을 흉내 내 측정했더니, 첫 화면 표시가 이전(Google Fonts 1개가 화면을 막던 구조) **8.2초 → 0.3초**로 줄었습니다.
+- 모든 서체는 `font-display: swap`입니다. 기본 서체로 먼저 보이고, 서체가 도착하면 바뀝니다.
+- Noto Sans KR(4개 굵기)을 빼고 Pretendard 다이내믹 서브셋으로 바꿨습니다(쓰인 글자만 내려받음).
+- Google Fonts는 글자 범위별로 나뉘어 있어, 일본어·중국어 서체는 그 언어 글자가 화면에 있을 때만 내려받습니다. 쓰지 않는 굵기는 내려받지 않습니다.
+- 마루부리는 공식 웹폰트가 글자 범위로 나뉘어 있지 않은 한 벌 파일이라, 큰 제목용 **Bold 한 벌만** 불러옵니다. 첫 방문 시 내려받는 양이 가장 큰 서체이므로, 배포 후 실제 휴대폰 네트워크에서 확인하고 무겁다면 `font-display: optional`(두 번째 방문부터 적용)로 바꾸는 것을 권합니다.
+- `preconnect`: fonts.googleapis.com, fonts.gstatic.com, cdn.jsdelivr.net, hangeul.pstatic.net
+
+**검증** — `tests/card-themes.test.js`(테마별 서체 조합, 카드에 쓰는 서체·굵기를 페이지가 공식 배포처에서 모두 불러오는지, 저장 전 불러올 글자 목록, 캔버스가 테마 서체로 그리는지), `tests/e2e/memory-card.e2e.js`(저장 전 고운바탕·Noto Serif SC·Pretendard를 실제 문장 글자와 함께 요청), `tests/e2e/offline-vendor.e2e.js`(서체가 모두 차단돼도 기본 서체로 표시). 개발 환경에서는 외부 서체 서버에 접근할 수 없어, **실제 서체 모양은 배포된 사이트에서 확인이 필요**합니다(크기·간격·배치는 기본 서체로 확인).
+
 ### 3-5. 사료·역사 콘텐츠 신뢰성 점검 — 임진왜란·재일조선인 우선 (2026-10-16)
 
 | 항목 | 내용 |
@@ -228,7 +271,7 @@ npm test                                            # 기록 형식 확인 (질�
 - HTML · CSS · JavaScript (빌드 도구·프레임워크 없음, 정적 파일만으로 동작)
 - [Supabase](https://supabase.com) (PostgreSQL + REST, 공개 publishable 키 + RLS)
 - Supabase JS **2.117.2** — 외부 CDN 대신 `vendor/supabase-js/`에 보관 (학교망에서 CDN이 막혀도 동작)
-- Google Fonts (Noto Serif KR, Noto Sans KR, Cormorant Garamond)
+- 서체 (모두 SIL OFL 1.1): 마루부리(네이버 한글) · Pretendard(공식 GitHub 배포본, jsDelivr) · Google Fonts(Noto Serif KR, 고운바탕, Zen Old Mincho, Noto Serif SC, Cormorant Garamond) — 3-4-2 참고
 - 자체 구현 NLP (외부 AI API·학습된 언어 모델 **사용하지 않음**)
 - 시각화: 외부 그래프 라이브러리 없이 SVG 직접 생성 (`memory-map.js`) — 원 몇 개와 선만 필요해 D3 등 수백 KB 의존성을 추가할 이유가 없고, GitHub Pages에서 그대로 동작하기 때문입니다.
 - 테스트: Node.js 내장 `node:test` (추가 설치 없음)

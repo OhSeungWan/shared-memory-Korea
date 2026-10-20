@@ -28,7 +28,22 @@
   };
   /** 인스타그램 스토리에서 프로필(위)·답장 칸(아래)에 가려지는 영역. 글자는 이 밖에 두지 않습니다. */
   const STORY_SAFE = { top: 250, bottom: 1920 - 320 };
-  const SERIF = "'Noto Serif KR', 'Nanum Myeongjo', serif";
+  /**
+   * 카드 서체 (모두 SIL OFL 1.1 — index.html에서 공식 배포처로 불러옴). 불러오지 못하면 뒤의 기본 서체로 그려집니다.
+   * 카드 제목·문장은 Noto Serif KR / 고운바탕, 안내·라벨은 Pretendard, 영문 라벨은 Cormorant Garamond.
+   * 장식 속 한자(제첨·제목 칸·인장)는 테마에 맞춰 Noto Serif KR · Zen Old Mincho(우키요에) · Noto Serif SC(청록산수).
+   */
+  const FONTS = {
+    serif: "'Noto Serif KR', 'Nanum Myeongjo', serif",
+    quote: "'Gowun Batang', 'Noto Serif KR', 'Nanum Myeongjo', serif",
+    ui: "'Pretendard Variable', Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif",
+    latin: "'Cormorant Garamond', Georgia, 'Times New Roman', serif",
+    mincho: "'Zen Old Mincho', 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif KR', serif",
+    song: "'Noto Serif SC', 'Songti SC', 'Noto Serif KR', serif"
+  };
+  const SERIF = FONTS.serif;
+  /** 지금 그리는 테마의 장식용 한자 서체 (paintUnder/paintOver가 정함) */
+  let ornament = { family: FONTS.serif, max: 900 };
 
   /* ---------- 공통 도구 ---------- */
 
@@ -73,7 +88,7 @@
   /** 세로쓰기 (한 글자씩) */
   function vtext(c, str, x, y, size, color, weight) {
     c.save();
-    c.font = `${weight || 700} ${size}px ${SERIF}`;
+    c.font = `${Math.min(weight || 700, ornament.max)} ${size}px ${ornament.family}`;
     c.fillStyle = color; c.textAlign = 'center'; c.textBaseline = 'middle';
     Array.from(str).forEach((ch, k) => c.fillText(ch, x, y + size * 0.55 + k * size * 1.08));
     c.restore();
@@ -117,14 +132,14 @@
     c.fillStyle = o.relief ? color : paper;
     c.textAlign = 'center'; c.textBaseline = 'middle';
     if (chars.length === 1) {
-      c.font = `900 ${Math.round(size * 0.64)}px ${SERIF}`;
+      c.font = `${ornament.max} ${Math.round(size * 0.64)}px ${ornament.family}`;
       c.fillText(chars[0], 0, size * 0.04);
     } else {
       // 2~4자: 오른쪽 줄부터 위→아래 (전통 인장 배치)
       const cols = chars.length > 2 ? 2 : 1;
       const rows = Math.ceil(chars.length / cols);
       const fs = Math.round(size * (cols === 1 ? 0.4 : 0.38));
-      c.font = `900 ${fs}px ${SERIF}`;
+      c.font = `${ornament.max} ${fs}px ${ornament.family}`;
       chars.forEach((ch, k) => {
         const col = Math.floor(k / rows), row = k % rows;
         const x = cols === 1 ? 0 : (col === 0 ? size * 0.2 : -size * 0.2);
@@ -440,6 +455,8 @@
       bg: '#e8dcc2', paper: '#f7f0df', ink: '#221d17', soft: '#4a4036', mute: '#655a4c',
       line: '#d2c2a2', accent: '#9e2f26', onAccent: '#fff8ec', seal: '#b3362a', thread: '#6a4a2c'
     },
+    // 기록첩: 단단한 명조 제목 + 연필 글씨 같은 고운바탕 문장
+    fonts: { title: { family: FONTS.serif, weight: 700 }, quote: { family: FONTS.quote, weight: 700 }, ornament: { family: FONTS.serif, max: 900 } },
     feed: { top: 104, bottom: 92, side: 64 },
     story: { panel: { x: 92, y: 296, w: 914, h: 1258 } },
     paint(c, W, H, x) {
@@ -538,6 +555,8 @@
       line: '#e6d2bc', accent: '#a83a17', onAccent: '#fff8f0', seal: '#b8331d',
       trim: '#41603a'
     },
+    // 민화: 제목·문장 모두 부드러운 고운바탕
+    fonts: { title: { family: FONTS.quote, weight: 700 }, quote: { family: FONTS.quote, weight: 700 }, ornament: { family: FONTS.serif, max: 900 } },
     feed: { top: 168, bottom: 150, side: 58 },
     story: { panel: { x: 70, y: 318, w: 940, h: 1222 } },
     flower: { dark: '#c8361c', mid: '#e5552a', light: '#f2873b', edge: '#8f2412', center: '#f7c948' },
@@ -612,6 +631,8 @@
       line: '#cdbfa6', accent: '#ad1f28', onAccent: '#fff6ee', seal: '#ad1f28',
       sky: '#cf2c35', skyLight: '#f4c3b7', ground: '#1c6650', groundLight: '#94c4a6', trunk: '#3b3b3d', key: '#161616', indigo: '#24376b'
     },
+    // 우키요에: 판화의 굵은 윤곽처럼 묵직한 명조, 제목 칸 한자는 Zen Old Mincho
+    fonts: { title: { family: FONTS.serif, weight: 900 }, quote: { family: FONTS.serif, weight: 700 }, ornament: { family: FONTS.mincho, max: 700 } },
     feed: { top: 176, bottom: 168, side: 70 },
     story: { panel: { x: 84, y: 330, w: 912, h: 1210 } },
     blossom: { petal: '#fffdf6', edge: '#3a3330', stamen: '#d9a62e', center: '#e9c23e', sepal: '#8e2a26' },
@@ -678,7 +699,7 @@
         const lw = 226, lh = 60, lx = W - m - 34 - lw, ly = Math.max(m + 22, P.y / 2 - lh / 2);
         c.fillStyle = C.accent; c.fillRect(lx, ly, lw, lh);
         c.strokeStyle = C.key; c.lineWidth = 2.5; c.strokeRect(lx, ly, lw, lh);
-        c.save(); c.font = `700 38px ${SERIF}`; c.fillStyle = '#111'; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.save(); c.font = `700 38px ${ornament.family}`; c.fillStyle = '#111'; c.textAlign = 'center'; c.textBaseline = 'middle';
         c.fillText('共同記憶', lx + lw / 2, ly + lh / 2 + 2); c.restore();
       }
     },
@@ -709,6 +730,8 @@
       line: '#cfd2c0', accent: '#256760', onAccent: '#f6fbf8', seal: '#a8372f',
       azurite: '#2c5c86', malachite: '#3f9079', malachiteLight: '#93c7b1', ochre: '#b98b52', inkLine: '#38372f', mount: '#c4b48a'
     },
+    // 청록산수: 문인화처럼 한결 가벼운 명조 제목(500) + 고운바탕 문장, 인장 한자는 Noto Serif SC
+    fonts: { title: { family: FONTS.serif, weight: 500 }, quote: { family: FONTS.quote, weight: 700 }, ornament: { family: FONTS.song, max: 700 } },
     feed: { top: 150, bottom: 176, side: 58 },
     story: { panel: { x: 72, y: 308, w: 936, h: 1212 } },
     paint(c, W, H, x) {
@@ -764,6 +787,7 @@
       bg: '#f5f1e8', paper: '#faf7ef', ink: '#1a1a1a', soft: '#4a4a4a', mute: '#6e6964',
       line: '#d8d2c4', accent: '#8b3a3a', onAccent: '#ffffff', seal: '#8b3a3a'
     },
+    fonts: { title: { family: FONTS.serif, weight: 700 }, quote: { family: FONTS.serif, weight: 700 }, ornament: { family: FONTS.serif, max: 900 } },
     feed: { top: 28, bottom: 28, side: 28 },
     story: { panel: { x: 56, y: 280, w: 968, h: 1290 } },
     noBand: true,
@@ -783,6 +807,11 @@
   /* ---------- 공개 함수 ---------- */
 
   function getTheme(id) { return THEMES[id] || THEMES[DEFAULT_THEME]; }
+  /** 테마의 서체 조합 (제목 · 문장 · 안내 · 영문 · 장식 한자) */
+  function fontsOf(id) {
+    const f = getTheme(id).fonts;
+    return { title: f.title, quote: f.quote, ui: { family: FONTS.ui }, latin: { family: FONTS.latin }, ornament: f.ornament };
+  }
   function list() { return ORDER.map(id => THEMES[id]); }
   function normalizeFormat(f) { return f === 'story' ? 'story' : 'feed'; }
 
@@ -803,6 +832,7 @@
     const t = getTheme(themeId);
     const o = Object.assign({ format: 'feed', seed: 'card' }, opts);
     o.seed = `${o.seed}:${t.id}:${o.format}`;
+    ornament = t.fonts.ornament;
     c.save();
     t.paint(c, W, H, o);
     c.restore();
@@ -820,6 +850,7 @@
     const o = Object.assign({ format: 'feed', seed: 'card' }, opts);
     o.seed = `${o.seed}:${t.id}:${o.format}`;
     const inner = o.inner || o.panel;
+    ornament = t.fonts.ornament;
     c.save();
     c.beginPath();
     c.rect(0, 0, W, H);
@@ -857,7 +888,9 @@
     FORMATS,
     STORY_SAFE,
     THEMES,
+    FONTS,
     getTheme,
+    fontsOf,
     list,
     normalizeFormat,
     feedPanel,

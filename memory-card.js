@@ -260,9 +260,15 @@
   /* ---------- 7. Canvas 그리기 (브라우저) ---------- */
 
   // 그림 장식·색은 card-themes.js가 맡고, 여기서는 글자 배치만 합니다.
+  // 서체: 테마별 조합은 card-themes.js(fontsOf). 아래는 card-themes.js 없이 그릴 때의 기본값입니다.
   const SERIF = "'Noto Serif KR', 'Nanum Myeongjo', serif";
-  const SANS = "'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif";
+  const SANS = "'Pretendard Variable', Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif";
   const LATIN = "'Cormorant Garamond', Georgia, serif";
+  const DEFAULT_FONTS = {
+    title: { family: SERIF, weight: 900 }, quote: { family: SERIF, weight: 700 },
+    ui: { family: SANS }, latin: { family: LATIN }, ornament: { family: SERIF, max: 900 }
+  };
+  function fontsFor(theme) { return Themes && Themes.fontsOf ? Themes.fontsOf(theme.id) : DEFAULT_FONTS; }
 
   const AFTER_SIZE = { short: 50, medium: 42, long: 36, xlong: 32 };
   const BEFORE_SIZE = { short: 34, medium: 30, long: 28, xlong: 26 };
@@ -299,7 +305,8 @@
     return { ops, measureWith, text };
   }
 
-  function drawSeal(ops, C, cx, cy, size, mark) {
+  function drawSeal(ops, C, cx, cy, size, mark, orn) {
+    const o = orn || DEFAULT_FONTS.ornament;
     ops.push(c => {
       c.save();
       c.translate(cx, cy);
@@ -309,13 +316,14 @@
       c.strokeStyle = C.onAccent; c.globalAlpha = 0.55; c.lineWidth = 2;
       c.strokeRect(-size / 2 + 7, -size / 2 + 7, size - 14, size - 14);
       c.globalAlpha = 1;
-      c.font = `900 ${Math.round(size * 0.64)}px ${SERIF}`; c.fillStyle = C.onAccent; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.font = `${o.max} ${Math.round(size * 0.64)}px ${o.family}`; c.fillStyle = C.onAccent; c.textAlign = 'center'; c.textBaseline = 'middle';
       c.fillText(mark, 0, size * 0.045);
       c.restore();
     });
   }
 
-  function drawStamps(ops, C, stamps, x0, cy, r, gap, labelSize) {
+  function drawStamps(ops, C, stamps, x0, cy, r, gap, labelSize, ui) {
+    const UI = ui || SANS;
     stamps.forEach((st, k) => {
       const cx = x0 + r + k * gap;
       ops.push(c => {
@@ -324,7 +332,7 @@
         else { c.setLineDash([5, 5]); c.strokeStyle = C.line; c.lineWidth = 2; c.stroke(); c.setLineDash([]); }
         c.font = `700 ${Math.round(r * 0.88)}px ${SERIF}`; c.textAlign = 'center'; c.textBaseline = 'middle';
         c.fillStyle = st.done ? C.onAccent : C.line; c.fillText(st.mark, cx, cy + 2);
-        c.font = `400 ${labelSize}px ${SANS}`; c.fillStyle = st.done ? C.soft : C.mute; c.textBaseline = 'alphabetic';
+        c.font = `400 ${labelSize}px ${UI}`; c.fillStyle = st.done ? C.soft : C.mute; c.textBaseline = 'alphabetic';
         c.fillText(st.label, cx, cy + r + labelSize + 12);
       });
     });
@@ -344,6 +352,7 @@
     const W = 1080, f = theme.feed, C = theme.colors;
     const PAD = f.side + CONTENT_INSET, INNER = W - PAD * 2;
     const { ops, measureWith, text } = composer(ctx);
+    const F = fontsFor(theme), UI = F.ui.family, LAT = F.latin.family, TF = F.title, QF = F.quote;
     let truncated = false;
     let y = f.top + 80;
 
@@ -353,27 +362,27 @@
       r.lines.forEach(l => { y += lineH; text(l, font, color, PAD + (indent || 0), y); });
       return r;
     };
-    const label = str => { y += 56; text(str, `600 22px ${SANS}`, C.accent, PAD, y); y += 8; };
+    const label = str => { y += 56; text(str, `600 22px ${UI}`, C.accent, PAD, y); y += 8; };
     const rule = gap => { y += gap || 36; const yy = y; ops.push(c => { c.strokeStyle = C.line; c.lineWidth = 2; c.beginPath(); c.moveTo(PAD, yy); c.lineTo(W - PAD, yy); c.stroke(); }); };
     const bullet = (str, maxLines) => {
       y += 8;
       const startY = y;
-      block(str, `400 28px ${SANS}`, C.ink, 44, maxLines, 30);
+      block(str, `400 28px ${UI}`, C.ink, 44, maxLines, 30);
       ops.push(c => { c.fillStyle = C.accent; c.fillRect(PAD, startY + 22, 14, 3); });
     };
 
     // 머리글
-    text('SHARED MEMORY', `600 28px ${LATIN}`, C.ink, PAD, y);
-    text(`MY MEMORY CARD · ${model.date}`, `400 22px ${LATIN}`, C.mute, W - PAD, y, 'right');
+    text('SHARED MEMORY', `600 28px ${LAT}`, C.ink, PAD, y);
+    text(`MY MEMORY CARD · ${model.date}`, `400 22px ${LAT}`, C.mute, W - PAD, y, 'right');
     rule(30);
 
     // 사건 + 도장
     const sealSize = 132;
     const sealY = y + 40;
-    drawSeal(ops, C, W - PAD - sealSize / 2, sealY + sealSize / 2, sealSize, model.mark);
+    drawSeal(ops, C, W - PAD - sealSize / 2, sealY + sealSize / 2, sealSize, model.mark, F.ornament);
     y += 40;
-    y += 30; text(model.era, `400 26px ${LATIN}`, C.accent, PAD, y);
-    const titleFont = `900 64px ${SERIF}`;
+    y += 30; text(model.era, `400 26px ${LAT}`, C.accent, PAD, y);
+    const titleFont = `${TF.weight} 64px ${TF.family}`;
     wrapText(model.title, INNER - sealSize - 30, measureWith(titleFont), 2).lines.forEach(l => { y += 78; text(l, titleFont, C.ink, PAD, y); });
     y = Math.max(y, sealY + sealSize);
     if (model.question) {
@@ -387,23 +396,23 @@
     label('탐구 전 · 나의 첫 생각');
     if (model.before) {
       const s = BEFORE_SIZE[model.tiers.before];
-      block(`“${model.before}”`, `400 ${s}px ${SERIF}`, C.soft, Math.round(s * 1.55), lim.before);
+      block(`“${model.before}”`, `400 ${s}px ${QF.family}`, C.soft, Math.round(s * 1.55), lim.before);
     } else {
-      block('탐구 전 문장을 남기지 않았어요.', `400 26px ${SANS}`, C.mute, 40, 1);
+      block('탐구 전 문장을 남기지 않았어요.', `400 26px ${UI}`, C.mute, 40, 1);
     }
 
     y += 30;
     const ay = y;
-    ops.push(c => { c.fillStyle = C.accent; c.font = `400 34px ${SANS}`; c.textAlign = 'left'; c.fillText('↓', PAD, ay + 10); });
+    ops.push(c => { c.fillStyle = C.accent; c.font = `400 34px ${UI}`; c.textAlign = 'left'; c.fillText('↓', PAD, ay + 10); });
 
     // 탐구 후 (주인공)
     label('탐구 후 · 나의 한 문장');
     const as = AFTER_SIZE[model.tiers.after];
-    block(`“${model.after}”`, `700 ${as}px ${SERIF}`, C.ink, Math.round(as * 1.5), lim.after);
+    block(`“${model.after}”`, `${QF.weight} ${as}px ${QF.family}`, C.ink, Math.round(as * 1.5), lim.after);
 
     if (model.change && (model.change.added.length || model.change.kept.length)) {
       y += 24;
-      const chFont = `400 25px ${SANS}`;
+      const chFont = `400 25px ${UI}`;
       if (model.change.added.length) block(`새로 쓴 말  ${model.change.added.join(' · ')}`, chFont, C.soft, 40, 2);
       if (model.change.kept.length) block(`계속 쓴 말  ${model.change.kept.join(' · ')}`, chFont, C.mute, 40, 2);
     }
@@ -425,7 +434,7 @@
     if (model.myQuestion) {
       rule(40);
       label('아직 남은 나의 질문');
-      block(model.myQuestion, `500 30px ${SERIF}`, C.ink, 46, lim.ask);
+      block(model.myQuestion, `400 30px ${QF.family}`, C.ink, 46, lim.ask);
     }
 
     // 탐구 기록 도장
@@ -433,16 +442,16 @@
     y += 40;
     const stampR = 34;
     const stampsY = y + stampR;
-    drawStamps(ops, C, model.stamps, PAD, stampsY, stampR, Math.min(200, (INNER - stampR * 2) / 3), 20);
+    drawStamps(ops, C, model.stamps, PAD, stampsY, stampR, Math.min(200, (INNER - stampR * 2) / 3), 20, UI);
     y = stampsY + stampR + 32;
 
     // 하단
     y += 56;
-    text('참여자가 직접 쓴 문장으로 만든 카드입니다. 정답이나 점수를 뜻하지 않습니다.', `400 20px ${SANS}`, C.mute, PAD, y);
+    text('참여자가 직접 쓴 문장으로 만든 카드입니다. 정답이나 점수를 뜻하지 않습니다.', `400 20px ${UI}`, C.mute, PAD, y);
     const noteY = y;
     y += 36;
     text('共  Shared Memory · 동북아 역사 공동 기억 프로젝트', `600 22px ${SERIF}`, C.accent, PAD, y);
-    ops.push(c => { if (truncated) { c.font = `400 20px ${SANS}`; c.fillStyle = C.mute; c.textAlign = 'right'; c.fillText('(긴 문장은 일부 생략)', W - PAD, y); } });
+    ops.push(c => { if (truncated) { c.font = `400 20px ${UI}`; c.fillStyle = C.mute; c.textAlign = 'right'; c.fillText('(긴 문장은 일부 생략)', W - PAD, y); } });
     return { ops, y, noteY, get truncated() { return truncated; }, PAD };
   }
 
@@ -496,20 +505,21 @@
     const P = Themes ? Themes.storyPanel(theme) : Object.assign({}, theme.story.panel);
     const X = P.x + CONTENT_INSET + 6, IW = P.w - (CONTENT_INSET + 6) * 2;
     const { ops, measureWith, text } = composer(c);
+    const F = fontsFor(theme), UI = F.ui.family, LAT = F.latin.family, TF = F.title, QF = F.quote;
     let truncated = false;
     const rule = yy => ops.push(k => { k.strokeStyle = C.line; k.lineWidth = 2; k.beginPath(); k.moveTo(X, yy); k.lineTo(X + IW, yy); k.stroke(); });
 
     // 머리글 · 사건
     let y = P.y + 80;
-    text('SHARED MEMORY', `600 30px ${LATIN}`, C.ink, X, y);
-    text(model.date, `400 26px ${LATIN}`, C.mute, X + IW, y, 'right');
+    text('SHARED MEMORY', `600 30px ${LAT}`, C.ink, X, y);
+    text(model.date, `400 26px ${LAT}`, C.mute, X + IW, y, 'right');
     y += 28; rule(y);
     const sealSize = 116;
     const sealTop = y + 34;
-    drawSeal(ops, C, X + IW - sealSize / 2, sealTop + sealSize / 2, sealSize, model.mark);
+    drawSeal(ops, C, X + IW - sealSize / 2, sealTop + sealSize / 2, sealSize, model.mark, F.ornament);
     y += 34 + 32;
-    text(model.era, `400 30px ${LATIN}`, C.accent, X, y);
-    const titleFont = `900 62px ${SERIF}`;
+    text(model.era, `400 30px ${LAT}`, C.accent, X, y);
+    const titleFont = `${TF.weight} 62px ${TF.family}`;
     wrapText(model.title, IW - sealSize - 28, measureWith(titleFont), 2).lines.forEach(l => { y += 76; text(l, titleFont, C.ink, X, y); });
     y = Math.max(y, sealTop + sealSize) + 36;
     rule(y);
@@ -522,14 +532,14 @@
     const stampR = 30;
     const stampsCy = bottomRule - 36 - 20 - stampR;
     const gap = Math.min(220, (IW - stampR * 2) / 3);
-    drawStamps(ops, C, model.stamps, X + (IW - (gap * 3 + stampR * 2)) / 2, stampsCy, stampR, gap, 21);
+    drawStamps(ops, C, model.stamps, X + (IW - (gap * 3 + stampR * 2)) / 2, stampsCy, stampR, gap, 21, UI);
     rule(bottomRule);
     const midBottom = stampsCy - stampR - 40;
     const avail = midBottom - midTop;
 
     // 가운데: 탐구 전(작게) → 탐구 후(크게) → 새로 쓴 말
     const added = model.change && model.change.added ? model.change.added.slice(0, 5) : [];
-    const chipFont = `500 26px ${SANS}`;
+    const chipFont = `500 26px ${UI}`;
     const chipRows = [];
     if (added.length) {
       let row = [], w = 0;
@@ -542,7 +552,7 @@
     }
     let rows = chipRows.slice(0, 2);
     const chipsHeight = () => rows.length ? 46 + rows.length * 62 : 0;
-    const beforeFont = `400 32px ${SERIF}`;
+    const beforeFont = `400 32px ${QF.family}`;
     const beforeLH = 48;
     const beforeHeight = lines => model.before ? 40 + lines * beforeLH + 70 : 0;
     const afterLabelH = 52;
@@ -550,7 +560,7 @@
     // 주인공은 '탐구 후 한 문장': 넘치면 탐구 전 문장 줄 수 → 새로 쓴 말 줄 수 순으로 양보합니다.
     const fitAfter = beforeLines => {
       const b = model.before ? wrapText(`“${model.before}”`, IW, measureWith(beforeFont), beforeLines) : { lines: [], truncated: false };
-      const f = storyFit(`“${model.after}”`, IW, avail - beforeHeight(b.lines.length) - afterLabelH - chipsHeight(), s => measureWith(`700 ${s}px ${SERIF}`));
+      const f = storyFit(`“${model.after}”`, IW, avail - beforeHeight(b.lines.length) - afterLabelH - chipsHeight(), s => measureWith(`${QF.weight} ${s}px ${QF.family}`));
       return { b, f };
     };
     let { b: before, f: fit } = fitAfter(3);
@@ -562,27 +572,27 @@
     let m = midTop + Math.max(0, (avail - used) * 0.42);
 
     if (model.before) {
-      m += 30; text('탐구 전 · 나의 첫 생각', `600 24px ${SANS}`, C.accent, X, m);
+      m += 30; text('탐구 전 · 나의 첫 생각', `600 24px ${UI}`, C.accent, X, m);
       m += 10;
       before.lines.forEach(l => { m += beforeLH; text(l, beforeFont, C.soft, X, m); });
       m += 58;
       const ay = m;
-      ops.push(k => { k.fillStyle = C.accent; k.font = `400 38px ${SANS}`; k.textAlign = 'left'; k.textBaseline = 'alphabetic'; k.fillText('↓', X, ay); });
+      ops.push(k => { k.fillStyle = C.accent; k.font = `400 38px ${UI}`; k.textAlign = 'left'; k.textBaseline = 'alphabetic'; k.fillText('↓', X, ay); });
       m += 12;
     }
-    m += 34; text('탐구 후 · 나의 한 문장', `600 24px ${SANS}`, C.accent, X, m);
+    m += 34; text('탐구 후 · 나의 한 문장', `600 24px ${UI}`, C.accent, X, m);
     m += 18;
     const quoteY = m;
     ops.push(k => {
-      k.save(); k.font = `900 220px ${SERIF}`; k.fillStyle = C.accent; k.globalAlpha = 0.1; k.textAlign = 'left'; k.textBaseline = 'top';
+      k.save(); k.font = `${TF.weight} 220px ${TF.family}`; k.fillStyle = C.accent; k.globalAlpha = 0.1; k.textAlign = 'left'; k.textBaseline = 'top';
       k.fillText('“', X + IW - 150, quoteY - 30); k.restore();
     });
-    const afterFont = `${fit.size >= 42 ? 700 : 600} ${fit.size}px ${SERIF}`;
+    const afterFont = `${QF.weight} ${fit.size}px ${QF.family}`;
     fit.lines.forEach(l => { m += fit.lineH; text(l, afterFont, C.ink, X, m - Math.round(fit.size * 0.18)); });
 
     if (rows.length) {
       m += 46;
-      text('새로 쓴 말', `500 22px ${SANS}`, C.mute, X, m);
+      text('새로 쓴 말', `500 22px ${UI}`, C.mute, X, m);
       m += 14;
       rows.forEach(row => {
         let cx = X;
@@ -602,7 +612,7 @@
       });
     }
 
-    text(truncated ? '참여자가 직접 쓴 문장으로 만든 카드입니다. (긴 문장은 일부 생략)' : '참여자가 직접 쓴 문장으로 만든 카드입니다. 정답이나 점수를 뜻하지 않습니다.', `400 21px ${SANS}`, C.mute, X, noteY);
+    text(truncated ? '참여자가 직접 쓴 문장으로 만든 카드입니다. (긴 문장은 일부 생략)' : '참여자가 직접 쓴 문장으로 만든 카드입니다. 정답이나 점수를 뜻하지 않습니다.', `400 21px ${UI}`, C.mute, X, noteY);
     text('共  Shared Memory · 동북아 역사 공동 기억 프로젝트', `600 24px ${SERIF}`, C.accent, X, signY);
 
     const opts = { format: 'story', seed: model.eventId || 'card', panel: P, mark: model.mark, inner: inset(P, OVERLAY_INSET) };
@@ -610,6 +620,36 @@
     ops.forEach(op => op(c));
     paintOver(c, theme, W, H, opts);
     return { width: W, height: H, truncated, theme: theme.id, format: 'story', layout: { panel: P, inner: { x: X, y: P.y + 40, w: IW, h: signY - P.y - 40 }, afterSize: fit.size, contentBottom: Math.max(m, signY) } };
+  }
+
+  /**
+   * 카드를 그리기 전에 불러와야 할 서체와 글자 목록. (브라우저에서 document.fonts.load(font, text)에 그대로 넘깁니다)
+   * Google Fonts·Pretendard는 글자 범위별로 파일이 나뉘어 있어, 실제로 그릴 글자를 함께 넘겨야
+   * 한글·한자 조각까지 내려받습니다. (글자 없이 부르면 영문 조각만 받아 이미지가 기본 서체로 그려질 수 있음)
+   * @returns {Array<{font: string, text: string}>}
+   */
+  function fontLoads(model, opts) {
+    const o = typeof opts === 'string' ? { theme: opts } : (opts || {});
+    const theme = themeOf(o.theme);
+    const F = fontsFor(theme);
+    const m = model || {};
+    const uniq = str => Array.from(new Set(Array.from(String(str || '').replace(/\s+/g, '')))).join('') || 'A';
+    const stamps = (m.stamps || []).map(x => x.mark + x.label).join('');
+    const labels = '탐구전·나의첫생각후한문장새로쓴말계속다섯번째서술자내가담은것하며롭게발견관점아직남은질문참여자직접만든카드입니다정답이나점수를뜻하지않습니다긴일부생략↓';
+    const quotes = [m.before, m.after, m.myQuestion, '“”'].join('');
+    const ui = [labels, stamps, (m.discoveries || []).join(''), (m.change ? m.change.added.concat(m.change.kept).join('') : ''),
+      m.fifth ? JSON.stringify(m.fifth) : ''].join('');
+    const out = [
+      { font: `${F.title.weight} 64px ${F.title.family}`, text: uniq((m.title || '') + '“') },
+      { font: `${F.quote.weight} 48px ${F.quote.family}`, text: uniq(quotes) },
+      { font: `400 30px ${F.quote.family}`, text: uniq(quotes) },
+      { font: `500 28px ${SERIF}`, text: uniq((m.question || '') + stamps + '共Shared Memory·동북아역사공동기억프로젝트') },
+      { font: `400 24px ${F.ui.family}`, text: uniq(ui) },
+      { font: `600 24px ${F.ui.family}`, text: uniq(labels) },
+      { font: `400 26px ${F.latin.family}`, text: uniq('SHARED MEMORY MY CARD 0123456789.–·' + (m.era || '') + (m.date || '')) },
+      { font: `${F.ornament.max} 40px ${F.ornament.family}`, text: uniq((m.mark || '') + '共同記憶帖確') }
+    ];
+    return out;
   }
 
   /**
@@ -639,6 +679,7 @@
     buildCardModel,
     wrapText,
     storyFit,
+    fontLoads,
     drawCard
   };
 });
