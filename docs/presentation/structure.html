@@ -1,0 +1,52 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Noto+Sans+KR:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1700px;height:640px;background:transparent;font-family:'Noto Sans KR',sans-serif;color:#1a1a1a;word-break:keep-all}
+.row{display:flex;align-items:stretch;height:540px}
+.card{width:290px;background:#fffdf8;border:2px solid #e8d5b7;border-radius:6px;padding:30px 26px;display:flex;flex-direction:column}
+.card.end{border-color:#8b3a3a}
+.seal{width:64px;height:64px;background:#8b3a3a;color:#f5f1e8;font-family:'Noto Serif KR',serif;font-weight:700;font-size:38px;display:flex;align-items:center;justify-content:center;margin-bottom:22px}
+.step{font-size:18px;color:#8b3a3a;letter-spacing:.08em;margin-bottom:6px}
+h3{font-family:'Noto Serif KR',serif;font-weight:700;font-size:34px;line-height:1.25;margin-bottom:18px}
+p{font-size:22px;line-height:1.55;color:#4a453f}
+p+p{margin-top:12px}
+.note{margin-top:auto;font-size:19px;color:#8b3a3a;border-top:1px solid #e8d5b7;padding-top:14px}
+.arrow{width:62px;display:flex;align-items:center;justify-content:center}
+ul{list-style:none}
+li{font-size:22px;line-height:1.4;padding:9px 0;border-bottom:1px dashed #e8d5b7;display:flex;align-items:center;gap:10px}
+li:last-child{border-bottom:none}
+.dot{width:12px;height:12px;border-radius:50%;flex:none}
+.ai{border:2px solid #8b3a3a;background:transparent;width:14px;height:14px}
+li small{display:block;font-size:17px;color:#6f685f}
+.foot{height:100px;display:flex;align-items:center;justify-content:center;gap:28px;font-size:22px;color:#8b3a3a}
+.foot span.line{width:120px;height:1px;background:#e8d5b7}
+.foot b{font-weight:500}
+</style></head><body>
+<div class="row">
+ <div class="card"><div class="seal">問</div><div class="step">하나 · 질문</div><h3>같은 질문을<br>세 언어로</h3>
+  <p>사건 이름은 넣지 않습니다.</p><p>누가 어떤 이름을 고르는지 보기 위해서입니다.</p>
+  <div class="note">한국어 · 일본어 · 중국어</div></div>
+ <div class="arrow"><svg width="46" height="20" viewBox="0 0 46 20"><path d="M0 10H40M32 3L42 10L32 17" fill="none" stroke="#8b3a3a" stroke-width="2"/></svg></div>
+ <div class="card"><div class="seal">述</div><div class="step">둘 · 서술자</div><h3>네 개의 서술</h3>
+  <ul>
+   <li><span class="dot" style="background:#c8364b"></span>한국 측 서술</li>
+   <li><span class="dot" style="background:#2c3e7e"></span>일본 측 서술</li>
+   <li><span class="dot" style="background:#d4a017"></span>중국 측 서술</li>
+   <li><span class="dot ai"></span><span>AI 답변 기록<small>언어별 3회 · 원문 그대로</small></span></li>
+  </ul></div>
+ <div class="arrow"><svg width="46" height="20" viewBox="0 0 46 20"><path d="M0 10H40M32 3L42 10L32 17" fill="none" stroke="#8b3a3a" stroke-width="2"/></svg></div>
+ <div class="card"><div class="seal">讀</div><div class="step">셋 · 읽기</div><h3>같은 방법으로<br>읽는다</h3>
+  <p>모든 서술을 하나의 다국어 개념 사전으로 읽습니다.</p>
+  <div class="note">같은 글을 넣으면<br>언제나 같은 결과</div></div>
+ <div class="arrow"><svg width="46" height="20" viewBox="0 0 46 20"><path d="M0 10H40M32 3L42 10L32 17" fill="none" stroke="#8b3a3a" stroke-width="2"/></svg></div>
+ <div class="card"><div class="seal">空</div><div class="step">넷 · 빈자리</div><h3>기억의<br>빈자리</h3>
+  <p>다른 서술 대부분에는 있는데, 한 서술에만 없는 요소를 표시합니다.</p>
+  <div class="note">판정이 아니라<br>질문의 시작</div></div>
+ <div class="arrow"><svg width="46" height="20" viewBox="0 0 46 20"><path d="M0 10H40M32 3L42 10L32 17" fill="none" stroke="#8b3a3a" stroke-width="2"/></svg></div>
+ <div class="card end"><div class="seal">書</div><div class="step">다섯 · 학생</div><h3>다섯 번째<br>서술자</h3>
+  <p>학생이 자기 문장을 씁니다. 채운 빈자리와 새로 쓴 요소가 남습니다.</p>
+  <div class="note">My Memory Card</div></div>
+</div>
+<div class="foot"><span class="line"></span><b>AI를 실시간으로 부르지 않습니다</b>·<b>판정하지 않습니다</b>·<b>근거를 모두 공개합니다</b><span class="line"></span></div>
+</body></html>
