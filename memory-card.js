@@ -145,6 +145,22 @@
 
   /* ---------- 5. 카드 모델 ---------- */
 
+  /**
+   * 다섯 번째 서술자 칸: 참여자 문장이 채운 빈자리(filled)와 비교한 서술 어디에도 없던 요소(fresh).
+   * 입력은 narrator-analysis.js placeSentence 결과에 서술자 이름을 붙인 것입니다. 없으면 null(칸을 숨김).
+   * @param {{filled: {label, where: string[]}[], fresh: {label}[]}} input
+   */
+  function fifthNarrator(input) {
+    if (!input) return null;
+    const label = x => cleanText(x && x.label, 24);
+    const filled = (Array.isArray(input.filled) ? input.filled : [])
+      .map(x => ({ label: label(x), where: (Array.isArray(x.where) ? x.where : []).map(w => cleanText(w, 20)).filter(Boolean).slice(0, 3) }))
+      .filter(x => x.label && x.where.length)
+      .slice(0, 3);
+    const fresh = (Array.isArray(input.fresh) ? input.fresh : []).map(label).filter(Boolean).slice(0, 2);
+    return filled.length || fresh.length ? { filled, fresh } : null;
+  }
+
   function formatDate(d) {
     const date = d instanceof Date ? d : new Date(d || Date.now());
     if (isNaN(date.getTime())) return '';
@@ -154,7 +170,7 @@
 
   /**
    * 카드에 들어갈 내용을 만듭니다. 입력이 없는 항목은 비워 두고(카드에서 숨김), 지어내지 않습니다.
-   * @param {{event, before, after, discoveries, customDiscovery, question, change, flow, published, date}} input
+   * @param {{event, before, after, discoveries, customDiscovery, question, change, fifth, flow, published, date}} input
    */
   function buildCardModel(input) {
     const i = input || {};
@@ -182,6 +198,7 @@
       discoveries,
       myQuestion: cleanText(i.question, LIMITS.question),
       change,
+      fifth: after ? fifthNarrator(i.fifth) : null,
       stamps: [
         { id: 'compare', mark: '讀', label: '세 나라 서술', done: !!flow.viewedCompare },
         { id: 'nlp', mark: '析', label: '비교 분석', done: !!flow.viewedNlp },
@@ -338,6 +355,20 @@
       if (model.change.kept.length) block(`계속 쓴 말  ${model.change.kept.join(' · ')}`, chFont, 25, COLORS.mute, 40, 2);
     }
 
+    // 다섯 번째 서술자: 내 문장이 채운 빈자리 · 새로 쓴 요소
+    if (model.fifth) {
+      rule(40);
+      label('다섯 번째 서술자 · 내 문장이 담은 것');
+      const lines = model.fifth.filled.map(f => `‘${f.label}’ — ${f.where.join('·')}에는 없던 요소`)
+        .concat(model.fifth.fresh.map(f => `‘${f}’ — 비교한 서술 어디에도 없던 요소`));
+      lines.forEach(t => {
+        y += 8;
+        const startY = y;
+        block(t, `400 28px ${SANS}`, 28, COLORS.ink, 44, 2, 30);
+        ops.push(c => { c.fillStyle = COLORS.accent; c.fillRect(PAD, startY + 22, 14, 3); });
+      });
+    }
+
     // 발견한 관점
     if (model.discoveries.length) {
       rule(40);
@@ -411,6 +442,7 @@
     lengthTier,
     discoveryOptions,
     summarizeChange,
+    fifthNarrator,
     formatDate,
     buildCardModel,
     wrapText,
