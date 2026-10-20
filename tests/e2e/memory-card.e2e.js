@@ -85,7 +85,31 @@ run('memory-card', async ({ browser, base, check, mockPage }) => {
 
   const png = await downloadPng(page);
   check('이미지로 저장: PNG 파일 1080px 폭, 4:5 이상 높이', png.info.png && png.info.width === 1080 && png.info.height >= 1350 && png.info.height <= 1920, JSON.stringify(png));
-  check('저장 파일 이름에 사건 id', /^shared-memory-card-zainichi-\d{8}\.png$/.test(png.name), png.name);
+  check('저장 파일 이름에 사건 id · 디자인(기본: 고문서)', /^shared-memory-card-zainichi-\d{8}-archive\.png$/.test(png.name), png.name);
+
+  // 카드 디자인 (아트 컬렉션) · 인스타 스토리
+  const themes = await page.$$eval('[data-card-theme]', els => els.map(e => ({ id: e.dataset.cardTheme, on: e.getAttribute('aria-checked') })));
+  check('카드 디자인 5종, 기본은 고문서 (하나만 선택)', themes.length === 5 && themes[0].id === 'archive' && themes[0].on === 'true' && themes.filter(t => t.on === 'true').length === 1, JSON.stringify(themes));
+  check('화면 카드에 테마 그림이 그려짐', await page.$eval('#memoryCard', el => el.dataset.art === 'ready' && el.dataset.theme === 'archive'));
+  await page.click('[data-card-theme="ukiyoe"]');
+  check('디자인을 바꿔도 문장은 그대로', await page.$eval('#memoryCard', el => el.dataset.theme) === 'ukiyoe' &&
+    await page.$eval('.memory-card__quote--after', el => el.textContent) === `“${AFTER}”` && (await page.$$eval('.memory-card__list li', els => els.length)) === 3);
+  await page.focus('[data-card-theme="ukiyoe"]');
+  await page.keyboard.press('ArrowRight');
+  check('화살표 키로 디자인 고르기 (라디오 묶음)', await page.$eval('#memoryCard', el => el.dataset.theme) === 'sansu' && await page.evaluate(() => document.activeElement.dataset.cardTheme) === 'sansu');
+  const themed = await downloadPng(page);
+  check('고른 디자인으로 저장 (파일 이름에 디자인)', themed.info.width === 1080 && /^shared-memory-card-zainichi-\d{8}-sansu\.png$/.test(themed.name), themed.name);
+  await page.click('[data-card-format="story"]');
+  check('인스타 스토리: 미리보기 표시 · 저장 버튼 문구 바뀜', await page.isVisible('#storyCanvas') && !(await page.isVisible('#memoryCard')) &&
+    /스토리 이미지 저장/.test(await page.textContent('[data-card-action="png"]')) && await page.isVisible('#cardStoryHint'));
+  check('스토리 미리보기 대체 텍스트에 탐구 후 문장 전체', (await page.getAttribute('#storyCanvas', 'aria-label')).includes(AFTER));
+  const story = await downloadPng(page);
+  check('스토리 이미지: 1080×1920 PNG (9:16)', story.info.png && story.info.width === 1080 && story.info.height === 1920, JSON.stringify(story));
+  check('스토리 파일 이름', /^shared-memory-card-zainichi-\d{8}-sansu-story\.png$/.test(story.name), story.name);
+  check('모바일: 가로 스크롤 없음 (스토리 미리보기)', await noHScroll(page));
+  check('디자인 선택도 저장소에 남지 않음', await page.evaluate(() => !Object.keys(localStorage).some(k => /card|theme/i.test(k))));
+  await page.click('[data-card-format="feed"]');
+  check('카드(4:5)로 돌아오면 화면 카드 다시 표시', await page.isVisible('#memoryCard .memory-card__title') && !(await page.isVisible('#storyCanvas')));
 
   await page.emulateMedia({ media: 'print' });
   check('인쇄 화면: 카드만 보이고 메뉴·버튼·다듬기 숨김', await page.isVisible('#memoryCard') && !(await page.isVisible('.nav')) &&
@@ -122,6 +146,7 @@ run('memory-card', async ({ browser, base, check, mockPage }) => {
   await page.waitForSelector('.page--home.active');
   check('새 참여자로 시작하면 카드 화면·내용 지움', await page.$eval('#memoryCard', el => el.innerHTML.trim() === '') && !(await page.isVisible('.page--card.active')));
   check('새 참여자로 시작하면 사건 링크 주소도 지움', await page.evaluate(() => location.hash === ''));
+  check('새 참여자로 시작하면 카드 디자인·형식도 기본값 (고문서 · 4:5)', await page.evaluate(() => cardState.theme === 'archive' && cardState.format === 'feed'));
   await page.evaluate(() => { location.hash = '#/e/zainichi'; });
   await page.waitForSelector('.page--detail.active');
   if (await page.isVisible('#participantGate')) await page.click('[data-gate-choice="continue"]');
