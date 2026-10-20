@@ -27,6 +27,7 @@ let memoryCache = {};                 // 연령대별로 다시 계산한 분석
 const Analyzer = window.SharedMemoryAnalyzer || null;
 const Gen = window.GenerationAnalysis || null;
 const Card = window.MemoryCard || null;
+const Themes = window.CardThemes || null;
 const Guide = window.ContributionGuide || { STYLES: [], TEMPLATES: [], REASONS: [] };
 const Store = window.SharedStore || null;
 const MemoryMap = window.SharedMemoryMap || null;
@@ -3204,7 +3205,9 @@ function renderMemoryMethod(a) {
    ------------------------------------------------------------ */
 
 const cardMemo = {};                   // 사건 id → 제출 직전의 { before, after, published } (제출 후에도 카드를 만들 수 있게)
-const cardState = { eventId: null, options: [], picked: [], custom: '', question: '', model: null, before: '', after: '' };
+const DEFAULT_CARD_THEME = Themes ? Themes.DEFAULT_THEME : 'classic';
+// theme·format은 '어떤 모양으로 저장할지'만 뜻합니다 (문장 내용 아님). 사건을 바꿔도 유지하고, 새 참여자로 시작하면 기본값으로 돌아갑니다.
+const cardState = { eventId: null, options: [], picked: [], custom: '', question: '', model: null, before: '', after: '', theme: DEFAULT_CARD_THEME, format: 'feed' };
 let cardDraftTimer = null;
 
 function resetCardState() {
@@ -3282,6 +3285,7 @@ function makeMemoryCard() {
 
 function openCardPage() {
   renderDiscoveryOptions();
+  renderCardDesign();
   renderCardPreview();
   renderFlowProgress();
   navigateTo('card');
@@ -3388,8 +3392,11 @@ function renderCardPreview() {
       ${m.change.kept.length ? `<div><dt>계속 쓴 말</dt><dd>${m.change.kept.map(escapeHtml).join(' · ')}</dd></div>` : ''}
     </dl>` : (m.change ? '<p class="memory-card__muted">탐구 전과 같은 단어로 다시 썼어요.</p>' : '');
   box.setAttribute('tabindex', '-1');
+  applyCardTheme(box);
   box.innerHTML = `
-    <div class="memory-card__band" aria-hidden="true"><i class="is-korea"></i><i class="is-japan"></i><i class="is-china"></i></div>
+    <canvas class="memory-card__art" aria-hidden="true"></canvas>
+    <div class="memory-card__panel">
+    ${Themes ? '' : '<div class="memory-card__band" aria-hidden="true"><i class="is-korea"></i><i class="is-japan"></i><i class="is-china"></i></div>'}
     <header class="memory-card__head">
       <span class="memory-card__brand">SHARED MEMORY</span>
       <span class="memory-card__no">MY MEMORY CARD · ${escapeHtml(m.date)}</span>
@@ -3421,32 +3428,209 @@ function renderCardPreview() {
     <footer class="memory-card__foot">
       <p>참여자가 직접 쓴 문장으로 만든 카드입니다. 정답이나 점수를 뜻하지 않습니다.</p>
       <p class="memory-card__sign"><span class="memory-card__logo" aria-hidden="true">共</span> Shared Memory · 동북아 역사 공동 기억 프로젝트</p>
-    </footer>`;
+    </footer>
+    </div>
+    <canvas class="memory-card__art memory-card__art--over" aria-hidden="true"></canvas>`;
   const share = document.querySelector('[data-card-action="share"]');
   if (share) share.hidden = !(navigator.share && navigator.canShare);
+  scheduleCardArt();
+  if (cardState.format === 'story') renderStoryPreview();
+}
+
+/* ------------------------------------------------------------
+   카드 디자인 (아트 컬렉션 테마 · 4:5 카드 / 9:16 인스타 스토리)
+   · 그림은 card-themes.js가 그립니다. 화면 카드는 HTML 글자 뒤·앞에 같은 그림을 캔버스로 깔고,
+     저장 이미지는 drawCard가 같은 함수로 그려 모양이 어긋나지 않습니다.
+   ------------------------------------------------------------ */
+
+function currentTheme() { return Themes ? Themes.getTheme(cardState.theme) : null; }
+
+/** 화면 카드에 테마 색(글자·선·강조)과 그림 띠 크기를 CSS 변수로 넣습니다. */
+function applyCardTheme(box) {
+  const t = currentTheme();
+  if (!t) return;
+  const C = t.colors;
+  box.dataset.theme = t.id;
+  const vars = {
+    '--ink': C.ink, '--ink-soft': C.soft, '--ink-mute': C.mute, '--line': C.line, '--accent': C.accent,
+    '--mc-bg': C.bg, '--mc-paper': C.paper, '--mc-seal': C.seal || C.accent, '--mc-on-accent': C.onAccent,
+    '--mc-top': (t.feed.top / 1080).toFixed(4), '--mc-side': (t.feed.side / 1080).toFixed(4), '--mc-bottom': (t.feed.bottom / 1080).toFixed(4)
+  };
+  Object.keys(vars).forEach(k => box.style.setProperty(k, vars[k]));
+}
+
+let cardArtFrame = 0;
+function scheduleCardArt() {
+  if (cardArtFrame) cancelAnimationFrame(cardArtFrame);
+  cardArtFrame = requestAnimationFrame(() => { cardArtFrame = 0; paintCardArt(); });
+}
+
+/** 화면 카드의 배경 그림(종이 패널 포함)과 패널 위로 넘어오는 장식을 그립니다. */
+function paintCardArt() {
+  const box = document.getElementById('memoryCard');
+  const t = currentTheme();
+  if (!box || !t) return;
+  const under = box.querySelector('.memory-card__art:not(.memory-card__art--over)');
+  const over = box.querySelector('.memory-card__art--over');
+  const panel = box.querySelector('.memory-card__panel');
+  const cw = box.clientWidth, ch = box.clientHeight;
+  if (!under || !over || !panel || !cw || !ch) return;
+  const scale = cw / 1080;
+  const W = 1080, H = ch / scale;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const br = box.getBoundingClientRect(), pr = panel.getBoundingClientRect();
+  const P = { x: (pr.left - br.left) / scale, y: (pr.top - br.top) / scale, w: pr.width / scale, h: pr.height / scale };
+  const cs = getComputedStyle(panel);
+  const pad = Math.min(parseFloat(cs.paddingLeft) || 16, parseFloat(cs.paddingTop) || 16);
+  const ins = Math.max(6, pad - 4) / scale;
+  const m = cardState.model || {};
+  const opts = { format: 'feed', seed: m.eventId || 'card', panel: P, mark: m.mark, inner: { x: P.x + ins, y: P.y + ins, w: P.w - ins * 2, h: P.h - ins * 2 } };
+  try {
+    [under, over].forEach(cv => { cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr); });
+    const cu = under.getContext('2d');
+    cu.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+    Themes.paintUnder(cu, t.id, W, H, opts);
+    const co = over.getContext('2d');
+    co.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+    Themes.paintOver(co, t.id, W, H, opts);
+    box.dataset.art = 'ready';
+  } catch (e) {
+    console.error('카드 그림 오류:', e);
+    delete box.dataset.art;
+  }
+}
+
+/** 디자인 고르기(썸네일)와 형식 버튼·저장 버튼 문구를 지금 선택에 맞춥니다. */
+function renderCardDesign() {
+  const wrap = document.getElementById('cardThemes');
+  if (wrap && Themes) {
+    if (!wrap.children.length) {
+      wrap.innerHTML = Themes.list().map(t => `
+        <button type="button" class="card-theme" role="radio" data-card-theme="${escapeAttr(t.id)}" aria-checked="false" tabindex="-1">
+          <canvas class="card-theme__thumb" aria-hidden="true"></canvas>
+          <span class="card-theme__name">${escapeHtml(t.name)}</span>
+          <span class="card-theme__sub">${escapeHtml(t.sub)}</span>
+        </button>`).join('');
+      // 썸네일은 한 번만, 화면이 그려진 뒤 차례로 그립니다.
+      const thumbs = Array.from(wrap.querySelectorAll('.card-theme__thumb'));
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      thumbs.forEach((cv, k) => setTimeout(() => {
+        try { Themes.renderThumb(cv, Themes.ORDER[k], cv.clientWidth || 80, cv.clientHeight || 100, dpr); } catch (e) { /* 썸네일 없이도 이름으로 고를 수 있음 */ }
+      }, 60 + k * 40));
+    }
+    wrap.querySelectorAll('[data-card-theme]').forEach(b => {
+      const on = b.dataset.cardTheme === cardState.theme;
+      b.setAttribute('aria-checked', String(on));
+      b.tabIndex = on ? 0 : -1;
+      b.classList.toggle('is-selected', on);
+    });
+  }
+  const t = currentTheme();
+  const note = document.getElementById('cardThemeNote');
+  if (note) {
+    note.textContent = t && t.inspiration ? `${t.name} — ${t.inspiration}에서 영감을 받아 직접 그린 창작 장식입니다.` : '';
+    note.hidden = !note.textContent;
+  }
+  const story = cardState.format === 'story';
+  document.querySelectorAll('[data-card-format]').forEach(b => {
+    const on = b.dataset.cardFormat === cardState.format;
+    b.setAttribute('aria-checked', String(on));
+    b.tabIndex = on ? 0 : -1;
+    b.classList.toggle('is-selected', on);
+  });
+  const saveLabel = document.querySelector('[data-card-save-label]');
+  if (saveLabel) saveLabel.textContent = story ? '스토리 이미지 저장' : '이미지로 저장';
+  const share = document.querySelector('[data-card-action="share"]');
+  if (share) share.textContent = story ? '인스타 스토리로 공유' : '공유하기';
+  const hint = document.getElementById('cardStoryHint');
+  if (hint) hint.hidden = !story;
+  const card = document.getElementById('memoryCard');
+  const preview = document.getElementById('storyPreview');
+  if (card) card.hidden = story;
+  if (preview) preview.hidden = !story;
+}
+
+function setCardTheme(id) {
+  if (!Themes || !Themes.THEMES[id] || id === cardState.theme) return;
+  cardState.theme = id;
+  setCardActionStatus('');
+  renderCardDesign();
+  renderCardPreview();
+}
+
+function setCardFormat(format) {
+  const f = format === 'story' ? 'story' : 'feed';
+  if (f === cardState.format) return;
+  cardState.format = f;
+  setCardActionStatus('');
+  renderCardDesign();
+  if (f === 'story') renderStoryPreview(); else scheduleCardArt();
+}
+
+/** 라디오 묶음(디자인·형식)에서 화살표 키로 고르기 */
+function handleCardRadioKey(e) {
+  const keys = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+  if (!(e.key in keys)) return;
+  const btn = e.target.closest('[data-card-theme], [data-card-format]');
+  if (!btn) return;
+  const group = Array.from(btn.parentElement.querySelectorAll(btn.dataset.cardTheme ? '[data-card-theme]' : '[data-card-format]'));
+  const next = group[(group.indexOf(btn) + keys[e.key] + group.length) % group.length];
+  e.preventDefault();
+  if (next.dataset.cardTheme) setCardTheme(next.dataset.cardTheme); else setCardFormat(next.dataset.cardFormat);
+  next.focus();
+}
+
+let storyPreviewToken = 0;
+/** 인스타 스토리 미리보기: 저장될 이미지와 똑같이 그립니다. (글꼴을 불러온 뒤 다시 그림) */
+function renderStoryPreview() {
+  const cv = document.getElementById('storyCanvas');
+  if (!cv || !Card) return;
+  const token = ++storyPreviewToken;
+  const draw = () => {
+    if (token !== storyPreviewToken) return;
+    const m = cardState.model || currentCardModel();
+    try {
+      const info = Card.drawCard(cv, m, { theme: cardState.theme, format: 'story' });
+      cv.setAttribute('aria-label', `인스타 스토리용 My Memory Card 이미지 (${currentTheme() ? currentTheme().name : ''} 디자인). ${m.title} — 탐구 후 나의 한 문장: “${m.after}”${info.truncated ? ' (이미지에서는 일부 생략)' : ''}`);
+    } catch (e) { console.error('스토리 미리보기 오류:', e); }
+  };
+  draw();
+  cardFontsReady().then(draw);
+}
+
+let cardFontsPromise = null;
+/** 웹 글꼴이 준비된 뒤에 그려야 이미지의 글꼴이 화면과 같습니다. (불러오지 못하면 2.5초 뒤 기본 글꼴로) */
+function cardFontsReady() {
+  if (!cardFontsPromise) {
+    cardFontsPromise = (async () => {
+      try {
+        if (document.fonts && document.fonts.load) {
+          await Promise.race([
+            Promise.all([
+              document.fonts.load("900 64px 'Noto Serif KR'"), document.fonts.load("700 40px 'Noto Serif KR'"),
+              document.fonts.load("400 28px 'Noto Sans KR'"), document.fonts.load("600 28px 'Cormorant Garamond'")
+            ]),
+            new Promise(r => setTimeout(r, 2500))
+          ]);
+        }
+      } catch (e) { /* 기본 글꼴 */ }
+    })();
+  }
+  return cardFontsPromise;
 }
 
 async function cardCanvas() {
   const canvas = document.createElement('canvas');
-  // 웹 글꼴이 준비된 뒤에 그려야 이미지의 글꼴이 화면과 같습니다. (불러오지 못하면 기본 글꼴로 그림)
-  try {
-    if (document.fonts && document.fonts.load) {
-      await Promise.race([
-        Promise.all([
-          document.fonts.load("900 64px 'Noto Serif KR'"), document.fonts.load("700 40px 'Noto Serif KR'"),
-          document.fonts.load("400 28px 'Noto Sans KR'"), document.fonts.load("600 28px 'Cormorant Garamond'")
-        ]),
-        new Promise(r => setTimeout(r, 2500))
-      ]);
-    }
-  } catch (e) { /* 기본 글꼴 */ }
-  const info = Card.drawCard(canvas, cardState.model || currentCardModel());
+  await cardFontsReady();
+  const info = Card.drawCard(canvas, cardState.model || currentCardModel(), { theme: cardState.theme, format: cardState.format });
   return { canvas, info };
 }
 
+/** 저장 파일 이름: 사건 · 날짜 · 디자인 (스토리는 -story) */
 function cardFileName() {
   const m = cardState.model || {};
-  return `shared-memory-card-${m.eventId || 'event'}-${(m.date || '').replace(/\./g, '')}.png`;
+  const story = cardState.format === 'story' ? '-story' : '';
+  return `shared-memory-card-${m.eventId || 'event'}-${(m.date || '').replace(/\./g, '')}-${cardState.theme}${story}.png`;
 }
 
 async function saveCardImage() {
@@ -3477,7 +3661,7 @@ async function shareCardImage() {
     const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
     const file = new File([blob], cardFileName(), { type: 'image/png' });
     if (!navigator.canShare || !navigator.canShare({ files: [file] })) { await saveCardImage(); return; }
-    await navigator.share({ files: [file], title: 'My Memory Card — Shared Memory' });
+    await navigator.share({ files: [file], title: cardState.format === 'story' ? 'My Memory Card — Shared Memory (스토리)' : 'My Memory Card — Shared Memory' });
     setCardActionStatus('');
   } catch (e) {
     if (e && e.name === 'AbortError') return;      // 사용자가 공유 창을 닫음
@@ -3706,6 +3890,9 @@ function resetParticipantUiState(options) {
   // 카드: 이전 참여자의 문장이 남지 않도록 메모리·화면에서 모두 지웁니다 (제출 직전 전환이어도 카드 메모는 지움).
   Object.keys(cardMemo).forEach(k => { delete cardMemo[k]; });
   resetCardState();
+  cardState.theme = DEFAULT_CARD_THEME;
+  cardState.format = 'feed';
+  renderCardDesign();
   // 공개 동의는 지금 쓰는 사람의 것이므로, 제출 직전 전환(keepDraft)에서는 그대로 둡니다.
   const consentBox = document.getElementById('publishConsent');
   if (consentBox && !keepDraft) consentBox.checked = false;
@@ -3901,9 +4088,18 @@ document.addEventListener('DOMContentLoaded', () => {
       gotoStep(stepGoto.dataset.stepGoto);
       return;
     }
+    const theme = e.target.closest('[data-card-theme]');
+    if (theme) { setCardTheme(theme.dataset.cardTheme); return; }
+    const format = e.target.closest('[data-card-format]');
+    if (format) { setCardFormat(format.dataset.cardFormat); return; }
     const chip = e.target.closest('[data-discovery]');
     if (chip) toggleDiscovery(chip.dataset.discovery);
   });
+  document.querySelector('.page--card')?.addEventListener('keydown', handleCardRadioKey);
+  // 화면 카드 크기가 바뀌면(글자 입력·화면 회전) 그림을 다시 맞춥니다.
+  const cardBox = document.getElementById('memoryCard');
+  if (cardBox && window.ResizeObserver) new ResizeObserver(() => { if (cardBox.innerHTML) scheduleCardArt(); }).observe(cardBox);
+  cardFontsReady().then(() => { if (document.querySelector('.page--card.active')) scheduleCardArt(); });
   document.getElementById('customDiscovery')?.addEventListener('input', e => {
     cardState.custom = e.target.value;
     clearTimeout(cardDraftTimer);

@@ -17,7 +17,8 @@
     - shared-store.js          : Supabase 읽기·쓰기(하위 호환 처리 포함)
     - vendor/supabase-js/      : Supabase JS 라이브러리 (저장소 내 보관, 버전 고정)
     - vendor/qrcode-generator/ : QR 코드 생성 라이브러리 (수업·전시용 QR 시트, 저장소 내 보관)
-    - memory-card.js           : 사건별 QR 링크 · My Memory Card(개인 결과 카드) 만들기·이미지 저장
+    - card-themes.js           : My Memory Card 아트 컬렉션 테마(고문서·민화·우키요에·청록산수·기본) — 직접 그리는 창작 장식
+    - memory-card.js           : 사건별 QR 링크 · My Memory Card(개인 결과 카드) 만들기·이미지 저장(4:5 카드 · 9:16 스토리)
     - script.js                : 화면 렌더링과 이벤트 처리
 
   이 파일은 SPA(Single Page Application) 구조입니다.
@@ -635,21 +636,39 @@
 
       <div class="page__header page__header--compact page__header--left no-print">
         <h2 class="page__title">나의 <span class="hl-ink">Memory Card</span>가 완성되었어요</h2>
-        <p class="page__desc">탐구 전과 후, 내가 직접 쓴 문장으로 만든 카드입니다. <strong>이미지로 저장</strong>해 간직하세요.</p>
+        <p class="page__desc">탐구 전과 후, 내가 직접 쓴 문장으로 만든 카드입니다. 마음에 드는 <strong>디자인</strong>을 고르고 <strong>이미지로 저장</strong>하거나 인스타 스토리로 공유해 보세요.</p>
       </div>
 
       <div class="card-layout">
         <!-- 카드 미리보기 (화면·인쇄) -->
         <div class="card-stage">
+          <!-- 카드 디자인 고르기: 동아시아 전통 미술에서 영감을 받은 아트 컬렉션 (card-themes.js) · 저장 형식 -->
+          <div class="card-design no-print">
+            <div class="card-design__row">
+              <span class="card-design__label" id="cardThemeLabel">카드 디자인</span>
+              <div class="card-format" role="radiogroup" aria-label="저장 형식">
+                <button type="button" class="card-format__btn" role="radio" aria-checked="true" data-card-format="feed">카드 <small>4:5</small></button>
+                <button type="button" class="card-format__btn" role="radio" aria-checked="false" tabindex="-1" data-card-format="story">인스타 스토리 <small>9:16</small></button>
+              </div>
+            </div>
+            <div class="card-design__themes" id="cardThemes" role="radiogroup" aria-labelledby="cardThemeLabel"><!-- JS --></div>
+            <p class="card-design__note" id="cardThemeNote"></p>
+          </div>
           <article class="memory-card" id="memoryCard" aria-label="My Memory Card"><!-- JS --></article>
+          <!-- 인스타 스토리(9:16) 미리보기: 저장될 이미지를 그대로 그립니다 -->
+          <figure class="story-preview no-print" id="storyPreview" hidden>
+            <div class="story-preview__frame"><canvas id="storyCanvas" class="story-preview__canvas" role="img" aria-label="인스타 스토리용 My Memory Card 이미지"></canvas></div>
+            <figcaption class="story-preview__cap">인스타그램 스토리 크기(1080×1920) 그대로입니다. 위·아래 가장자리는 인스타그램 화면 요소에 가려질 수 있어 그림만 두었어요.</figcaption>
+          </figure>
           <!-- STEP 4의 주요 행동: 이미지로 저장 (휴대폰에서는 화면 아래에 붙음) -->
           <div class="card-actions no-print">
-            <button type="button" class="btn btn--primary" data-card-action="png">이미지로 저장 <span aria-hidden="true">↓</span></button>
+            <button type="button" class="btn btn--primary" data-card-action="png"><span data-card-save-label>이미지로 저장</span> <span aria-hidden="true">↓</span></button>
           </div>
           <div class="card-actions card-actions--more no-print">
             <button type="button" class="btn btn--small" data-card-action="share" hidden>공유하기</button>
             <button type="button" class="btn btn--small btn--ghost" data-card-action="print">인쇄 · PDF로 저장</button>
           </div>
+          <p class="card-actions__hint no-print" id="cardStoryHint" hidden>휴대폰에서 <strong>‘인스타 스토리로 공유’</strong>를 누른 뒤 Instagram → <strong>스토리</strong>를 고르면 바로 올릴 수 있어요. 공유 메뉴가 없으면 이미지를 저장하고 인스타그램 스토리에서 사진을 고르세요.</p>
           <p class="card-actions__status no-print" id="cardActionStatus" role="status" aria-live="polite"></p>
           <p class="card-actions__note no-print">카드는 이 기기 안에서만 만들어지고, Shared Memory 서버로 전송되지 않습니다. 공용 기기라면 저장한 뒤 ‘새 참여자로 시작’을 눌러 주세요.</p>
         </div>
@@ -751,6 +770,7 @@
   <script src="./shared-store.js"></script>
   <!-- QR 코드 생성 (저장소 내 보관 · 수정 없는 원본 · vendor/qrcode-generator/VERSION.json) -->
   <script src="./vendor/qrcode-generator/qrcode.js"></script>
+  <script src="./card-themes.js"></script>
   <script src="./memory-card.js"></script>
   <script src="./script.js"></script>
 </body>
