@@ -2542,6 +2542,24 @@ body.has-participant-gate { overflow: hidden; }
 .card-actions .btn--primary { animation: none; }
 .card-actions .btn { min-height: 46px; }
 .card-actions__status { font-size: var(--fs-sm); color: var(--ink-soft); min-height: 1.2em; }
+/* 카드 이미지 창 — 내려받기가 막힌 브라우저에서 길게 눌러 저장 (script.js openCardSaveSheet) */
+.card-save-sheet {
+  position: fixed; inset: 0; z-index: 210;
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem; background: rgba(26, 26, 26, 0.45);
+}
+.card-save-sheet__box {
+  background: var(--bg-card); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+  border-radius: var(--radius); box-shadow: var(--shadow-lg);
+  width: 100%; max-width: 440px; max-height: calc(100dvh - 2rem); overflow: auto;
+  padding: 1.2rem; word-break: keep-all;
+}
+.card-save-sheet__title { font-family: var(--font-serif); font-size: var(--fs-lg); margin-bottom: 0.4rem; }
+.card-save-sheet__msg { font-size: var(--fs-sm); color: var(--ink-soft); line-height: var(--lh-body); margin-bottom: 0.8rem; }
+.card-save-sheet__frame { text-align: center; margin-bottom: 0.9rem; }
+.card-save-sheet__img { display: block; width: 100%; height: auto; max-height: 60dvh; object-fit: contain; border-radius: 4px; box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.12)); -webkit-touch-callout: default; }
+.card-save-sheet__actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
+.card-save-sheet__actions .btn { animation: none; }
 .card-actions__note { font-size: var(--fs-xs); color: var(--ink-mute); line-height: var(--lh-text); }
 
 .card-builder {
