@@ -17,6 +17,9 @@
   const SUMMARY_RPC = 'participation_summary';
   const AGE_RPC = 'age_group_participants';
   const LIST_RPC = 'public_expressions';
+  const CHOICE_TABLE = 'exploration_choices';   // 기본 체험 객관식 응답 (공동 표현과 별도 테이블)
+  const CHOICE_RPC = 'choice_counts';
+  const CHOICE_ID_RE = /^[a-z0-9_]{1,40}$/;
   // 공개 조회 컬럼 (age_group 제외). 2단계 SQL 이후에는 테이블에서 age_group 을 직접 읽을 수 없습니다.
   const PUBLIC_COLUMNS = 'id,event_key,author_name,country_code,content,reason,created_at,expression_style,' +
     'selected_concepts,reason_tags,before_content,prior_learning,viewed_compare,viewed_nlp,viewed_sources,completed_flow';
@@ -355,6 +358,45 @@
     }
   }
 
+  /* ---------- 기본 체험 객관식 응답 (동의한 경우에만 · 공동 표현과 별도) ---------- */
+
+  /**
+   * 객관식 응답을 저장합니다. 사건·질문·선택지 id만 보내고, 닉네임·문장·참여자 키는 보내지 않습니다.
+   * 테이블이 아직 없으면(SQL 실행 전) unavailable=true로 돌려주고, 화면은 그대로 진행합니다.
+   * @param {Array<{event_key, question_id, option_id}>} rows
+   * @returns {{ok, unavailable?, error?, count?}}
+   */
+  async function insertChoices(rows) {
+    const c = client();
+    if (!c) return { ok: false, unavailable: true };
+    const clean = (Array.isArray(rows) ? rows : [])
+      .filter(r => r && typeof r.event_key === 'string' && CHOICE_ID_RE.test(r.question_id) && CHOICE_ID_RE.test(r.option_id))
+      .map(r => ({ event_key: r.event_key, question_id: r.question_id, option_id: r.option_id }))
+      .slice(0, 10);
+    if (!clean.length) return { ok: true, count: 0 };
+    try {
+      const res = await c.from(CHOICE_TABLE).insert(clean);
+      if (!res.error) return { ok: true, count: clean.length };
+      if (isMissingSchemaError(res.error)) return { ok: false, unavailable: true };
+      return { ok: false, error: friendlyError(res.error) };
+    } catch (e) {
+      return { ok: false, error: friendlyError(e) };
+    }
+  }
+
+  /** 사건별 객관식 집계 → { available, rows: [{question_id, option_id, n}] } (작은 표본은 서버가 숨김) */
+  async function fetchChoiceCounts(eventKey) {
+    const c = client();
+    if (!c || typeof c.rpc !== 'function') return { available: false, rows: [] };
+    try {
+      const res = await c.rpc(CHOICE_RPC, { p_event_key: eventKey });
+      if (res.error) return { available: false, rows: [] };
+      return { available: true, rows: Array.isArray(res.data) ? res.data : [] };
+    } catch (e) {
+      return { available: false, rows: [] };
+    }
+  }
+
   /* ---------- 참여 현황 집계 (RPC만 사용, 원본 키는 받지 않음) ---------- */
 
   /** 전체 참여자 수 → { available, participants, completedParticipants, expressions } */
@@ -414,6 +456,8 @@
     addEmpathy,
     fetchParticipationSummary,
     fetchAgeGroupParticipants,
+    insertChoices,
+    fetchChoiceCounts,
     empathizedSet,
     storageGet,
     storageSet,

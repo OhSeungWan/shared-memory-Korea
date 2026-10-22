@@ -35,6 +35,8 @@ run('fourth-narrator', async ({ browser, base, check, mockPage, presetContinue }
     if (aiFile) await page.route(/ai-narratives-data\.js/, r => r.fulfill({ contentType: 'text/javascript', body: aiFile }));
     await page.goto(base + 'index.html#/e/' + eventId);
     await page.waitForSelector('#flowProgress [data-step-goto="2"]');
+    // 임진왜란·재일조선인은 QR로 들어오면 기본 체험으로 열립니다 → 화면의 '심화 탐구' 링크로 AI 서술이 있는 탐구로 전환
+    if (await page.$eval('.page--detail', el => el.dataset.mode) === 'quick') await page.click('[data-deep-switch="2"]');
     await page.click('#flowProgress [data-step-goto="2"]');
     return page;
   }

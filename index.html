@@ -125,23 +125,44 @@
             <li class="hero-names__item hero-names__item--ai"><small>AI</small><span>?</span></li>
           </ul>
           <p class="hero__subtitle">
-            세 나라의 서술과 AI의 답을 나란히 읽고, 이 역사를 기억하는 <strong>다섯 번째 서술자</strong>가 되어 보세요.
-            <span class="hero__subtitle-more">마지막에는 나의 생각이 담긴 <strong>My Memory Card</strong>를 받아 갑니다.</span>
+            <strong>사건 하나를 누르면 바로 시작해요.</strong> 세 나라의 기록을 읽고, 내가 중요하다고 생각하는 관점을 고르면
+            <strong>My Memory Card</strong>를 받아 갑니다.
           </p>
 
-          <!-- 참여 버튼: 연령대(선택)를 고른 뒤 역사 선택으로 이동 -->
-          <div class="hero__cta">
-            <button class="btn btn--primary btn--hero" id="startButton" type="button" aria-controls="agePicker" aria-expanded="false">
-              <span>다섯 번째 서술자 되어 보기</span>
-              <svg width="22" height="22" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                <path d="M4 10h12m0 0l-4-4m4 4l-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+          <!-- 기본 체험: 큰 사건 카드를 누르면 연령대·긴 설명 없이 바로 STEP 1(세 나라 비교)이 열립니다 -->
+          <div class="quick-picks" role="group" aria-label="바로 시작할 역사 고르기">
+            <button type="button" class="quick-pick quick-pick--imjin" data-quick-event="imjin">
+              <span class="quick-pick__seal" aria-hidden="true">壬</span>
+              <span class="quick-pick__body">
+                <span class="quick-pick__era">1592 – 1598</span>
+                <strong class="quick-pick__title">임진왜란</strong>
+                <span class="quick-pick__q">같은 전쟁, 왜 이름이 셋일까?</span>
+              </span>
+              <span class="quick-pick__go">시작 <span aria-hidden="true">→</span></span>
             </button>
-            <ul class="hero__meta" aria-label="참여 조건">
-              <li>약 5분</li>
-              <li>익명</li>
-              <li>로그인 없음</li>
-            </ul>
+            <button type="button" class="quick-pick quick-pick--zainichi" data-quick-event="zainichi">
+              <span class="quick-pick__seal" aria-hidden="true">在</span>
+              <span class="quick-pick__body">
+                <span class="quick-pick__era">1910 – 현재</span>
+                <strong class="quick-pick__title">재일조선인</strong>
+                <span class="quick-pick__q">이 역사는 누구의 역사일까?</span>
+              </span>
+              <span class="quick-pick__go">시작 <span aria-hidden="true">→</span></span>
+            </button>
+          </div>
+          <ul class="hero__meta" aria-label="참여 조건">
+            <li>3–5분</li>
+            <li>익명</li>
+            <li>로그인 없음</li>
+            <li>정답 없음</li>
+          </ul>
+
+          <!-- 다른 사건·심화 탐구: 연령대(선택)를 고른 뒤 사건 목록으로 (기존 흐름) -->
+          <div class="hero__cta hero__cta--secondary">
+            <button class="btn btn--small btn--ghost" id="startButton" type="button" aria-controls="agePicker" aria-expanded="false">
+              <span>다른 사건 · 전체 탐구 둘러보기</span>
+              <span aria-hidden="true">→</span>
+            </button>
           </div>
 
           <!-- 실제 Supabase 집계 기반 참여자 수 (집계 함수가 없거나 0명이면 숨김) -->
@@ -176,12 +197,12 @@
               <div><small>1592 – 1598</small><strong>임진왜란</strong></div>
               <span class="hero-card__seal">壬</span>
             </div>
-            <p class="hero-card__label">탐구 전 · 나의 첫 생각</p>
-            <p class="hero-card__quote hero-card__quote--before">“일본과 조선이 싸운 전쟁”</p>
+            <p class="hero-card__label">내가 고른 관점 · 객관식</p>
+            <p class="hero-card__quote hero-card__quote--before">— 서로 다른 이름을 함께 보여 주는 것</p>
             <p class="hero-card__arrow">↓</p>
-            <p class="hero-card__label">탐구 후 · 나의 한 문장</p>
+            <p class="hero-card__label">나의 한 줄 소감 · 직접 쓴 문장</p>
             <p class="hero-card__quote">“같은 전쟁을 세 나라는 서로 다른 이름과 기억으로 남겼다.”</p>
-            <ul class="hero-card__stamps"><li>서술</li><li>비교</li><li>사료</li></ul>
+            <ul class="hero-card__stamps"><li>서술</li><li>관점</li><li>소감</li></ul>
           </div>
           </div>
           <figcaption class="hero-card__caption" id="heroCardCaption">탐구를 마치면 받는 <strong>나만의 Memory Card</strong> <small>(예시 문장)</small></figcaption>
@@ -189,10 +210,10 @@
         </div>
 
         <!-- 탐구 4단계 한눈에 보기 (사건 화면의 STEP 1/4 ~ 4/4와 같은 이름) -->
-        <ol class="hero__steps hero__steps--v2" aria-label="탐구 4단계">
-          <li><span class="hero__step-num">1</span><strong>내가 아는 역사</strong></li>
-          <li><span class="hero__step-num">2</span><strong>세 나라 기록 비교</strong></li>
-          <li><span class="hero__step-num">3</span><strong>나의 최종 표현</strong></li>
+        <ol class="hero__steps hero__steps--v2" aria-label="기본 체험 4단계">
+          <li><span class="hero__step-num">1</span><strong>세 나라 기록 비교</strong></li>
+          <li><span class="hero__step-num">2</span><strong>관점 고르기</strong></li>
+          <li><span class="hero__step-num">3</span><strong>한 줄 소감</strong></li>
           <li><span class="hero__step-num">4</span><strong>Memory Card</strong></li>
         </ol>
       </div>
@@ -286,7 +307,7 @@
       <!-- 탭 1: 국가별 서술 비교 -->
       <div class="tab-content active" data-tab-content="compare">
         <div class="step-head">
-          <p class="step-head__kicker">STEP 2 · 세 나라 기록 비교</p>
+          <p class="step-head__kicker" id="compareKicker">STEP 2 · 세 나라 기록 비교</p>
           <h3 class="step-head__q">세 나라는 같은 사건을 <span class="hl-ink">어떻게 다르게</span> 기록했을까요?</h3>
           <p class="step-head__desc">세 기록을 차례로 읽고, 아래의 공통점·차이점 카드에서 무엇이 같고 다른지 확인해 보세요.</p>
         </div>
@@ -310,6 +331,11 @@
             <!-- JS가 채워줍니다 -->
           </div>
         </details>
+
+        <!-- 기본 체험에서만 보이는 '심화 탐구' 입구 (AI·NLP·사료·공동 표현은 모두 그대로 있음) -->
+        <p class="quick-only deep-switch">
+          더 알고 싶다면 <button type="button" class="before-card__link" data-deep-switch="2">AI의 서술 · 단어 분석 · 사료 보기 (심화 탐구)</button>
+        </p>
 
         <!-- 네 번째 서술자로 이어지는 안내 (탭 이동을 강제하지 않음) -->
         <button type="button" class="fourth-cta" data-goto-tab="fourth">
@@ -557,6 +583,32 @@
         </div>
       </div>
 
+      <!-- 기본 체험 STEP 2: 관점 고르기 (한 화면에 질문 하나 · 정답 없음) — script.js renderChoiceStep -->
+      <section class="choice-step" id="choiceStep" aria-labelledby="choicePrompt"><!-- JS --></section>
+
+      <!-- 기본 체험 STEP 3: 한 줄 소감 (건너뛰기 가능) — script.js renderReflectStep -->
+      <section class="reflect-step" id="reflectStep" aria-labelledby="reflectPrompt">
+        <div class="step-head">
+          <p class="step-head__kicker">STEP 3 · 한 줄 소감 <small>(선택)</small></p>
+          <h3 class="step-head__q" id="reflectPrompt">탐구를 마친 지금, 이 역사에 대해 <span class="hl-ink">느낀 점</span>을 한 문장으로 남겨 볼까요?</h3>
+          <p class="step-head__desc">짧아도 괜찮아요. 쓰지 않고 넘어가도 카드는 만들어져요.</p>
+        </div>
+        <div class="reflect-recap" id="reflectRecap"><!-- JS: 내가 고른 관점 --></div>
+        <label class="sr-only" for="reflectInput">나의 한 줄 소감</label>
+        <textarea id="reflectInput" class="shared-form__textarea shared-form__textarea--main" rows="3" maxlength="300" placeholder="예: 이름 하나에도 각 나라가 이 전쟁을 보는 눈이 담겨 있다는 게 새로웠다."></textarea>
+        <p class="guide-step__hint"><span id="reflectCount">0</span>/300자 · 이 문장은 카드에만 담기고, 어디에도 공개되지 않아요.</p>
+        <button type="button" class="before-card__link before-card__link--quiet reflect-skip" data-reflect-skip>소감 쓰지 않고 카드 만들기</button>
+
+        <label class="consent-check consent-check--soft">
+          <input type="checkbox" id="choiceShareConsent" />
+          <span><strong>내가 고른 관점(객관식)만</strong> 익명 통계에 보태기 <small>(선택 · 고른 선택지 이름만 보내요. 소감·닉네임·연령대는 보내지 않습니다)</small></span>
+        </label>
+
+        <p class="deep-switch">
+          내 문장을 다른 사람들과 나누고 싶다면 <button type="button" class="before-card__link" data-deep-switch="3">공동 표현 쓰기 (심화 탐구 · 공개는 별도 동의)</button>
+        </p>
+      </section>
+
       <!-- 단계별 주요 행동 버튼 (휴대폰에서는 화면 아래에 고정, 키보드가 열리면 키보드 위로 올라옵니다)
            단계마다 버튼 하나만 보입니다. script.js renderStepCta -->
       <div class="step-cta no-print" id="stepCta">
@@ -573,6 +625,10 @@
               <button type="button" class="btn btn--primary step-cta__main" data-step-main="1-next" data-step-goto="2" hidden><span>세 나라의 기록 보러 가기</span><span aria-hidden="true">→</span></button>
               <button type="button" class="btn btn--primary step-cta__main" data-step-main="2" data-step-goto="3" hidden><span>발견한 관점으로 내 표현 쓰기</span><span aria-hidden="true">→</span></button>
               <button type="button" class="btn btn--primary step-cta__main" data-step-main="3" id="makeCardButton" hidden><span>My Memory Card 만들기</span><span aria-hidden="true">→</span></button>
+              <!-- 기본 체험 (임진왜란·재일조선인) -->
+              <button type="button" class="btn btn--primary step-cta__main" data-step-main="q1" data-quick-next hidden><span>관점 고르러 가기</span><span aria-hidden="true">→</span></button>
+              <button type="button" class="btn btn--primary step-cta__main" data-step-main="q2" data-quick-next hidden><span class="step-cta__label" id="choiceNextLabel">다음 질문</span><span aria-hidden="true">→</span></button>
+              <button type="button" class="btn btn--primary step-cta__main" data-step-main="q3" id="quickCardButton" hidden><span>My Memory Card 만들기</span><span aria-hidden="true">→</span></button>
             </div>
           </div>
         </div>
@@ -698,6 +754,8 @@
           <p class="card-actions__hint no-print" id="cardStoryHint" hidden>휴대폰에서 <strong>‘인스타 스토리로 공유’</strong>를 누른 뒤 Instagram → <strong>스토리</strong>를 고르면 바로 올릴 수 있어요. 공유 메뉴가 없으면 이미지를 저장하고 인스타그램 스토리에서 사진을 고르세요.</p>
           <p class="card-actions__status no-print" id="cardActionStatus" role="status" aria-live="polite"></p>
           <p class="card-actions__note no-print">카드는 이 기기 안에서만 만들어지고, Shared Memory 서버로 전송되지 않습니다. 공용 기기라면 저장한 뒤 ‘새 참여자로 시작’을 눌러 주세요.</p>
+          <!-- 기본 체험: 다른 참여자들이 고른 관점 (객관식 집계 · 질문별 5명 미만이면 숨김) -->
+          <section class="choice-others no-print" id="choiceOthers" aria-live="polite" hidden></section>
         </div>
 
         <!-- 카드 다듬기 -->
@@ -799,6 +857,7 @@
   <script src="./vendor/qrcode-generator/qrcode.js"></script>
   <script src="./card-themes.js"></script>
   <script src="./memory-card.js"></script>
+  <script src="./choice-questions.js"></script>
   <script src="./script.js"></script>
 </body>
 </html>
