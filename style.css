@@ -3893,3 +3893,59 @@ body { word-break: keep-all; overflow-wrap: break-word; }
 /* 카드 화면으로 넘어올 때 카드에 초점을 옮기지만(화면 읽기 프로그램용), 붉은 테두리는 키보드 사용 때만 */
 #memoryCard:focus:not(:focus-visible) { outline: none; }
 .page--detail[data-mode="quick"] .stepper__bar { display: none; }   /* 진행은 4단계 칩 한 줄로 */
+
+/* ============================================================
+   22. 서체 — 고급스러운 동양풍 박물관 아카이브 (2026-10)
+   · 영문 라벨·연도·숫자: 비문(碑文)에서 온 대문자 세리프 Cinzel, 넓은 자간
+   · 큰 제목: 굵은 마루부리 대신 Noto Serif KR 400–500 (가늘고 단정한 명조)
+   · 읽는 글(서술·질문·선택지·소감): 명조 400, 버튼·메뉴·안내 같은 조작 글씨만 Pretendard
+   · 마루부리는 대체 서체로 남겨 둡니다(서체를 못 불러오면 같은 명조 계열로)
+   ============================================================ */
+:root {
+  --font-display: 'Noto Serif KR', 'MaruBuri', 'Nanum Myeongjo', serif;
+  --font-latin: 'Cinzel', 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+}
+h1, h2, .hero__title, .hero--v2 .hero__title, .page__title, .detail__title, .archive__title, .compare-sum__title {
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+h3, h4 { font-weight: 600; }
+.hero--v2 .hero__title .hero__title-line { font-weight: 400; }
+.hero--v2 .hero__title .hl-ink { font-weight: 500; }
+.hero__title-sub { font-family: var(--font-serif); font-weight: 300; letter-spacing: 0; color: var(--ink-soft); }
+.hero__eyebrow { font-weight: 400; letter-spacing: 0.6em; font-size: var(--fs-md); }
+
+/* 로고: 'SHARED MEMORY' 비문 대문자 */
+.nav__logo-text strong { font-weight: 500; letter-spacing: 0.12em; font-size: 1.02rem; }
+
+/* 연도·영문 라벨: 넓은 자간 */
+.quick-pick__era, .memory-card__era, .qr-card__era, .hero-card__event small, .event-card__era, .detail__era {
+  font-family: var(--font-latin); letter-spacing: 0.14em; font-weight: 400;
+}
+
+/* 제목류: 가는 명조 */
+.quick-pick__title, .narrative-card__title, .event-card__title, .sum-card__title,
+.choice-step .step-head__q, .reflect-step .step-head__q, .step-head__q, .stepper__title,
+.source-card__title, .cluster-card__title, .choice-others__title, .card-builder__title, .finish-box__title, .age-picker__title {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.quick-pick__title { font-weight: 600; }
+.choice-step .step-head__q, .reflect-step .step-head__q { font-weight: 500; line-height: 1.45; }
+
+/* 읽는 글: 명조 */
+.narrative-card__text, .quick-pick__q, .detail__question, .choice-option__label, .reflect-recap__list,
+.hero-card__quote, .shared-item__text {
+  font-family: var(--font-serif);
+}
+.narrative-card__text { font-weight: 400; color: #3a3a3a; }
+.quick-pick__q { font-weight: 400; }
+.choice-option { font-weight: 400; }
+.choice-option__label { font-size: var(--fs-base); line-height: 1.6; }
+.choice-option.is-selected .choice-option__label { font-weight: 600; }
+.detail__question { font-weight: 500; }
+
+/* 단계 머리말·작은 라벨: 넓은 자간의 작은 글씨 */
+.step-head__kicker { letter-spacing: 0.08em; }
+.step-head__kicker { font-weight: 500; }
