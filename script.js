@@ -3680,6 +3680,7 @@ function resetCardState() {
   cardState.model = null;
   cardState.before = '';
   cardState.after = '';
+  clearCardImage();
   ['customDiscovery', 'myQuestion'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   // STEP 3에서 바로 고를 수 있도록 발견 후보는 사건을 열 때 만들어 둡니다 (모두 사건 데이터·NLP 결과에서 옴).
   const event = currentEvent();
@@ -3947,6 +3948,7 @@ function applyCardTheme(box) {
 
 let cardArtFrame = 0;
 function scheduleCardArt() {
+  prepareCardImage();
   if (cardArtFrame) cancelAnimationFrame(cardArtFrame);
   cardArtFrame = requestAnimationFrame(() => { cardArtFrame = 0; paintCardArt(); });
 }
@@ -4072,6 +4074,7 @@ function renderStoryPreview() {
   const cv = document.getElementById('storyCanvas');
   if (!cv || !Card) return;
   const token = ++storyPreviewToken;
+  prepareCardImage();
   const draw = () => {
     if (token !== storyPreviewToken) return;
     const m = cardState.model || currentCardModel();
@@ -4091,21 +4094,21 @@ function renderStoryPreview() {
  */
 async function ensureCardFonts(model, themeId, format) {
   try {
-    if (!document.fonts || !document.fonts.load || !Card || !Card.fontLoads) return;
+    if (!document.fonts || !document.fonts.load || !Card || !Card.fontLoads) return true;
     const reqs = Card.fontLoads(model || cardState.model || currentCardModel(), { theme: themeId || cardState.theme, format: format || cardState.format });
-    await Promise.race([
-      Promise.all(reqs.map(r => document.fonts.load(r.font, r.text).catch(() => []))),
-      new Promise(r => setTimeout(r, 3000))
+    return await Promise.race([
+      Promise.all(reqs.map(r => document.fonts.load(r.font, r.text).catch(() => []))).then(() => true),
+      new Promise(r => setTimeout(() => r(false), 3000))
     ]);
-  } catch (e) { /* 기본 서체 */ }
+  } catch (e) { return true; /* 기본 서체 */ }
 }
 
 async function cardCanvas() {
   const canvas = document.createElement('canvas');
   const model = cardState.model || currentCardModel();
-  await ensureCardFonts(model, cardState.theme, cardState.format);
+  const fontsReady = await ensureCardFonts(model, cardState.theme, cardState.format);
   const info = Card.drawCard(canvas, model, { theme: cardState.theme, format: cardState.format });
-  return { canvas, info };
+  return { canvas, info, fontsReady };
 }
 
 /** 저장 파일 이름: 사건 · 날짜 · 디자인 (스토리는 -story) */
@@ -4115,34 +4118,116 @@ function cardFileName() {
   return `shared-memory-card-${m.eventId || 'event'}-${(m.date || '').replace(/\./g, '')}-${cardState.theme}${story}.png`;
 }
 
-async function saveCardImage() {
-  if (!Card) return;
-  setCardActionStatus('이미지를 만드는 중입니다…');
-  try {
-    const { canvas, info } = await cardCanvas();
+/* ------------------------------------------------------------
+   카드 이미지 저장 · 공유
+   · 카드가 보이거나 바뀌면 저장용 PNG를 미리 만들어 둡니다. 버튼을 누르면 기다리지 않고 바로 내려받습니다
+     (예전에는 누른 뒤 글꼴을 최대 3초 기다리고 그려서, 첫 방문 휴대폰에서 내려받기가 늦게 시작됐습니다).
+   · 같은 카드를 연달아 누르면 한 번만 내려받습니다 (브라우저의 '여러 파일 자동 다운로드' 차단을 피함).
+   · 내려받기가 막힌 브라우저를 위해 ‘이미지로 열기’(길게 눌러 저장)를 함께 둡니다.
+   · 미리 만든 이미지는 이 창의 메모리에만 있고, ‘새 참여자로 시작’하면 지웁니다.
+   ------------------------------------------------------------ */
+
+// provisional: 글꼴을 3초 안에 다 받지 못해 기본 서체로 그린 이미지 — 글꼴이 도착하면 다시 만듭니다.
+let cardImage = { key: '', blob: null, url: '', info: null, pending: null, provisional: false };
+let cardImageTimer = 0;
+let cardSaving = false;
+let cardLastSave = { key: '', at: 0 };
+const CARD_RESAVE_MS = 2000;            // 같은 카드를 이 시간 안에 다시 누르면 한 번으로 봄
+
+function cardImageKey() {
+  return JSON.stringify([cardState.model || null, cardState.theme, cardState.format]);
+}
+
+function clearCardImage() {
+  clearTimeout(cardImageTimer);
+  if (cardImage.url) URL.revokeObjectURL(cardImage.url);
+  cardImage = { key: '', blob: null, url: '', info: null, pending: null, provisional: false };
+  cardLastSave = { key: '', at: 0 };
+  closeCardSaveSheet();
+  const open = document.querySelector('[data-card-action="open-image"]');
+  if (open) open.hidden = true;
+}
+
+/** 카드 화면이 바뀐 뒤 잠시 기다렸다가 저장용 이미지를 미리 만듭니다. */
+function prepareCardImage() {
+  if (!Card || !cardState.model) return;
+  clearTimeout(cardImageTimer);
+  cardImageTimer = setTimeout(() => {
+    if (document.querySelector('.page--card.active')) buildCardImage({ refresh: true }).catch(() => {});
+  }, 300);
+}
+
+/**
+ * 지금 카드의 PNG (같은 카드면 만들어 둔 것을 씀)
+ * @param {{refresh?: boolean}} [opts] refresh: 기본 서체로 임시로 그린 이미지면 다시 만듦 (미리 만들기에서만)
+ */
+function buildCardImage(opts) {
+  const key = cardImageKey();
+  if (cardImage.key === key && cardImage.blob && !(opts && opts.refresh && cardImage.provisional)) return Promise.resolve(cardImage);
+  if (cardImage.key === key && cardImage.pending) return cardImage.pending;
+  const job = (async () => {
+    const { canvas, info, fontsReady } = await cardCanvas();
     const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
     if (!blob) throw new Error('이미지를 만들지 못했습니다.');
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = cardFileName();
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 4000);
-    setCardActionStatus(`이미지(${info.width}×${info.height})를 저장했습니다.${info.truncated ? ' 긴 문장은 이미지에서 일부 생략되었습니다(화면 카드에는 전체가 보입니다).' : ''} 휴대폰에서 저장이 안 되면 카드를 길게 눌러 저장하거나 ‘인쇄 · PDF로 저장’을 써 주세요.`);
-  } catch (e) {
-    console.error('카드 이미지 오류:', e);
-    setCardActionStatus('이미지를 만들지 못했습니다. ‘인쇄 · PDF로 저장’을 이용해 주세요.');
+    const img = { key, blob, url: URL.createObjectURL(blob), info, pending: null, provisional: !fontsReady };
+    if (cardImage.pending === job) cardImage = img;
+    return img;
+  })();
+  // 이전 이미지 주소는 바로 지우지 않습니다 (이미 연 이미지 창·내려받기 링크가 쓰고 있을 수 있음)
+  const prev = cardImage.url;
+  if (prev) setTimeout(() => URL.revokeObjectURL(prev), 60000);
+  cardImage = { key, blob: null, url: '', info: null, pending: job, provisional: false };
+  job.catch(() => { if (cardImage.pending === job) cardImage.pending = null; });
+  return job;
+}
+
+function cardImageNote(img) {
+  return img.info && img.info.truncated ? ' 긴 문장은 이미지에서 일부 생략되었습니다(화면 카드에는 전체가 보입니다).' : '';
+}
+
+function setCardSaveBusy(busy) {
+  cardSaving = busy;
+  const btn = document.querySelector('[data-card-action="png"]');
+  if (btn) btn.setAttribute('aria-busy', String(busy));
+}
+
+function saveCardImage() {
+  if (!Card) return;
+  const key = cardImageKey();
+  if (cardSaving) return;                                                  // 만드는 중에 또 누름
+  if (cardLastSave.key === key && Date.now() - cardLastSave.at < CARD_RESAVE_MS) {
+    setCardActionStatus('방금 내려받기를 시작했어요. 저장되지 않았다면 아래 ‘이미지로 열기’를 눌러 주세요.');
+    return;
   }
+  if (cardImage.key === key && cardImage.blob) { downloadCardImage(cardImage); return; }
+  setCardSaveBusy(true);
+  setCardActionStatus('이미지를 만드는 중입니다…');
+  buildCardImage().then(img => downloadCardImage(img)).catch(e => {
+    console.error('카드 이미지 오류:', e);
+    setCardActionStatus('이미지를 만들지 못했습니다. 잠시 뒤 다시 누르거나 ‘인쇄 · PDF로 저장’을 이용해 주세요.');
+  }).finally(() => setCardSaveBusy(false));
+}
+
+function downloadCardImage(img) {
+  const a = document.createElement('a');
+  a.href = img.url;
+  a.download = cardFileName();
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  cardLastSave = { key: img.key, at: Date.now() };
+  // 페이지는 실제로 저장됐는지 알 수 없으므로 '시작했습니다'로 안내합니다.
+  setCardActionStatus(`이미지(${img.info.width}×${img.info.height}) 내려받기를 시작했습니다.${cardImageNote(img)}`);
+  const open = document.querySelector('[data-card-action="open-image"]');
+  if (open) open.hidden = false;
 }
 
 async function shareCardImage() {
   try {
-    const { canvas } = await cardCanvas();
-    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-    const file = new File([blob], cardFileName(), { type: 'image/png' });
-    if (!navigator.canShare || !navigator.canShare({ files: [file] })) { await saveCardImage(); return; }
+    const img = await buildCardImage();
+    const file = new File([img.blob], cardFileName(), { type: 'image/png' });
+    if (!navigator.canShare || !navigator.canShare({ files: [file] })) { saveCardImage(); return; }
     await navigator.share({ files: [file], title: cardState.format === 'story' ? 'My Memory Card — Shared Memory (스토리)' : 'My Memory Card — Shared Memory' });
     setCardActionStatus('');
   } catch (e) {
@@ -4151,10 +4236,61 @@ async function shareCardImage() {
   }
 }
 
+/** ‘이미지로 열기’: 내려받기가 막힌 브라우저에서 이미지를 띄워 길게 눌러 저장하게 합니다. */
+let cardSheetReturn = null;
+function openCardImage() {
+  setCardActionStatus('이미지를 여는 중입니다…');
+  buildCardImage().then(openCardSaveSheet).catch(() => setCardActionStatus('이미지를 만들지 못했습니다. ‘인쇄 · PDF로 저장’을 이용해 주세요.'));
+}
+
+function openCardSaveSheet(img) {
+  closeCardSaveSheet();
+  cardSheetReturn = document.activeElement;
+  const sheet = document.createElement('div');
+  sheet.className = 'card-save-sheet no-print';
+  sheet.id = 'cardSaveSheet';
+  sheet.setAttribute('role', 'dialog');
+  sheet.setAttribute('aria-modal', 'true');
+  sheet.setAttribute('aria-labelledby', 'cardSaveSheetTitle');
+  sheet.innerHTML = `
+    <div class="card-save-sheet__box">
+      <h3 class="card-save-sheet__title" id="cardSaveSheetTitle">카드 이미지</h3>
+      <p class="card-save-sheet__msg">휴대폰은 이미지를 <strong>길게 눌러</strong> ‘이미지 저장’을 고르세요. 컴퓨터는 아래 ‘파일로 내려받기’를 누르세요.</p>
+      <div class="card-save-sheet__frame"><img class="card-save-sheet__img" alt="My Memory Card 이미지"></div>
+      <div class="card-save-sheet__actions">
+        <a class="btn btn--small" data-card-sheet-download>파일로 내려받기</a>
+        <button type="button" class="btn btn--small btn--ghost" data-card-sheet-close>닫기</button>
+      </div>
+    </div>`;
+  const link = sheet.querySelector('[data-card-sheet-download]');
+  link.href = img.url;
+  link.download = cardFileName();
+  sheet.querySelector('.card-save-sheet__img').src = img.url;
+  sheet.addEventListener('click', e => {
+    if (e.target === sheet || e.target.closest('[data-card-sheet-close]')) closeCardSaveSheet();
+  });
+  document.body.appendChild(sheet);
+  setCardActionStatus('');
+  sheet.querySelector('[data-card-sheet-close]').focus({ preventScroll: true });
+}
+
+function closeCardSaveSheet() {
+  const sheet = document.getElementById('cardSaveSheet');
+  if (!sheet) return;
+  sheet.remove();
+  if (cardSheetReturn && document.contains(cardSheetReturn)) cardSheetReturn.focus({ preventScroll: true });
+  cardSheetReturn = null;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('cardSaveSheet')) closeCardSaveSheet();
+});
+
 function handleCardAction(action) {
   if (action === 'back') { navigateTo('detail'); setRouteHash(currentEventId); return; }
   if (action === 'png') { saveCardImage(); return; }
   if (action === 'share') { shareCardImage(); return; }
+  if (action === 'open-image') { openCardImage(); return; }
   if (action === 'print') { window.print(); return; }
   if (action === 'memory') { navigateTo('detail'); setRouteHash(currentEventId); gotoTab('memory'); return; }
   if (action === 'publish') {
