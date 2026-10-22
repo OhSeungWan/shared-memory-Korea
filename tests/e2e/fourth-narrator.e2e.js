@@ -2,9 +2,13 @@
    실행: node tests/e2e/fourth-narrator.e2e.js   (전체: npm run test:e2e)
    AI 기록이 없을 때 '기록 전'과 질문 원문만 표시 · 세 나라만으로 빈자리 계산 · 비교 탭에서 이동 ·
    기록이 있을 때 답변 카드·회차 버튼·참고 번역·형식이 틀린 기록 제외 · HTML 이스케이프 · 모바일 화면
-   · 기록이 있는 경우는 테스트 안에서만 ai-narratives-data.js 응답을 가짜(FAKE_) 기록으로 바꿔 확인합니다. 실제 AI 답변이 아닙니다. */
+   · 1)·2)는 ai-narratives-data.js 응답을 테스트 안에서만 바꿔(빈 기록 / 가짜 FAKE_ 기록) 기록 유무와 상관없이 같은 조건으로 확인합니다.
+   · 4)는 저장소의 실제 기록(2026-10-22 수집 54건)을 그대로 불러와 화면에 반영되는지 확인합니다. */
 'use strict';
 const { run } = require('./harness');
+
+// 테스트 전용: 기록이 하나도 없는 상태 (수집 전)
+const EMPTY_AI_FILE = 'const aiNarrativesData = { questionsVersion: fourthNarratorData.questionsVersion, records: [] };';
 
 // 테스트 전용 기록: 일본어 3회(형식 맞음) + 중국어 1회(질문이 바뀐 기록 → 화면에서 빠져야 함)
 const FAKE_AI_FILE = `
@@ -24,18 +28,19 @@ const aiNarrativesData = {
 };`;
 
 run('fourth-narrator', async ({ browser, base, check, mockPage, presetContinue }) => {
-  async function openFourth(context, eventId) {
+  async function openFourth(context, eventId, aiFile) {
     const page = await mockPage(context);
+    if (aiFile) await page.route(/ai-narratives-data\.js/, r => r.fulfill({ contentType: 'text/javascript', body: aiFile }));
     await page.goto(base + 'index.html#/e/' + eventId);
     await page.waitForSelector('#flowProgress [data-step-goto="2"]');
     await page.click('#flowProgress [data-step-goto="2"]');
     return page;
   }
 
-  // 1) 기록 없음 (실제 배포 상태)
+  // 1) 기록 없음 (수집 전 상태를 테스트 안에서 재현)
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   await ctx.addInitScript(presetContinue);
-  const page = await openFourth(ctx, 'hiroshima');
+  const page = await openFourth(ctx, 'hiroshima', EMPTY_AI_FILE);
   check('비교 탭에 네 번째 서술자 안내 버튼', await page.isVisible('[data-tab-content="compare"] .fourth-cta'));
   await page.click('[data-tab-content="compare"] .fourth-cta');
   check('안내 버튼으로 네 번째 서술자 탭 열림', await page.isVisible('[data-tab-content="fourth"].active'));
@@ -87,6 +92,35 @@ run('fourth-narrator', async ({ browser, base, check, mockPage, presetContinue }
   check('3회 중 1회만 나온 요소는 없음으로 보고 횟수 표시', /gap-cell--gap/.test(aiCell.cls) && /1\/3/.test(aiCell.text), JSON.stringify(aiCell));
   check('페이지 오류 없음 (기록 있음)', page2.__errors.length === 0, page2.__errors.join(' / '));
   await ctx2.close();
+
+  // 4) 실제 기록 (2026-10-22 수집, 6개 사건 × 3개 언어 × 3회 = 54건)
+  const ctx4 = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  await ctx4.addInitScript(presetContinue);
+  const page4 = await openFourth(ctx4, 'imjin');
+  await page4.click('.tab[data-tab="fourth"]');
+  const realCards = await page4.$$eval('#fourthNarrator .fourth-card .fourth-card__title', els => els.map(e => e.textContent.trim()));
+  check('실제 기록: 세 언어 카드 표시', realCards.join('|') === 'AI · 한국어로 물었을 때|AI · 일본어로 물었을 때|AI · 중국어로 물었을 때', realCards.join('|'));
+  check('실제 기록: 언어마다 회차 버튼 3개', (await page4.$$eval('#fourthNarrator [data-ai-run]', els => els.length)) === 9);
+  check('실제 기록: 일본어·중국어 카드에만 참고 번역', (await page4.$$eval('#fourthNarrator .fourth-card__translation', els => els.length)) === 2);
+  check('실제 기록: 모델 표시', /claude-opus-5-5/.test(await page4.textContent('#fourthNarrator .fourth-card__meta')));
+  check('실제 기록: "기록 전" 안내 없음', !/아직 기록 전/.test(await page4.textContent('#fourthNarrator')));
+  const realHeads = await page4.$$eval('#memoryGaps thead th', els => els.map(e => e.textContent.trim()));
+  check('실제 기록: 빈자리 표에 AI 세 언어 열', realHeads.join('|') === '요소|한국 측|일본 측|중국 측|AI · 한국어|AI · 일본어|AI · 중국어', realHeads.join('|'));
+  const cellOf = (pg, label, col) => pg.$$eval('#memoryGaps tbody tr', (rows, [label, col]) => {
+    const r = rows.find(x => x.querySelector('th').textContent.trim() === label);
+    const td = r && r.querySelectorAll('td')[col];
+    return td ? { cls: td.className, text: td.textContent } : null;
+  }, [label, col]);
+  const ming = await cellOf(page4, '명나라의 참전', 4);
+  check('실제 기록: 일본어 AI의 명나라 참전(明の援軍)은 빈자리가 아님', ming && /gap-cell--present/.test(ming.cls) && /3\/3/.test(ming.text), JSON.stringify(ming));
+  await page4.goto(base + 'index.html#/e/hiroshima');
+  await page4.waitForSelector('#flowProgress [data-step-goto="2"]');
+  await page4.click('#flowProgress [data-step-goto="2"]');
+  await page4.click('.tab[data-tab="fourth"]');
+  const victimsZh = await cellOf(page4, '조선인 피해자', 5);
+  check('실제 기록: 중국어 AI의 조선인 피해자(朝鲜半岛)는 빈자리가 아님', victimsZh && /gap-cell--present/.test(victimsZh.cls) && /3\/3/.test(victimsZh.text), JSON.stringify(victimsZh));
+  check('페이지 오류 없음 (실제 기록)', page4.__errors.length === 0, page4.__errors.join(' / '));
+  await ctx4.close();
 
   // 3) 모바일
   const ctx3 = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
