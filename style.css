@@ -3667,7 +3667,7 @@ body { word-break: keep-all; overflow-wrap: break-word; }
 .reflect-recap__label { font-size: var(--fs-xs); color: var(--accent); font-weight: 600; margin-bottom: 0.3rem; }
 .reflect-recap__list { list-style: none; display: grid; gap: 0.35rem; font-size: var(--fs-md); }
 .reflect-recap__list small { display: block; font-size: var(--fs-2xs); color: var(--ink-mute); }
-.reflect-skip { display: inline-block; margin: 0.4rem 0 1rem; min-height: 44px; }
+.reflect-step .consent-check--soft { margin-top: 0.8rem; }
 .consent-check--soft { background: var(--bg-card); border: 1px dashed var(--line); border-radius: var(--radius); padding: 0.75rem 0.9rem; }
 .consent-check--soft input:disabled + span { opacity: 0.55; }
 
@@ -3694,4 +3694,46 @@ body { word-break: keep-all; overflow-wrap: break-word; }
   .choice-option { font-size: var(--fs-md); min-height: 56px; }
   .choice-others__list li { grid-template-columns: 1fr 2.6rem; }
   .choice-others__list li .nlp-bar { grid-column: 1 / -1; grid-row: 2; }
+}
+
+/* ---------- 21-7. 기본 체험 동선 줄이기 (중복 버튼·긴 스크롤 정리) ----------
+   · STEP 1: 세 서술의 제목·본문만 먼저 (키워드·해설·근거 자료·NLP 카드·연표는 심화 탐구에 그대로)
+   · 단계 표시는 위쪽 한 곳만 (아래 버튼의 'STEP n/4' 글자는 숨김)
+   · 카드 화면: 카드 → 저장 버튼 → 디자인 고르기 순서 */
+.quick-scope { font-size: var(--fs-xs); color: var(--ink-mute); margin: -0.2rem 0 0.7rem; }
+.page--detail[data-mode="quick"] [data-tab-content="compare"] .step-head,
+.page--detail[data-mode="quick"] [data-tab-content="compare"] .scope-note,
+.page--detail[data-mode="quick"] #hlLegend,
+.page--detail[data-mode="quick"] .narrative-card__country-en,
+.page--detail[data-mode="quick"] .narrative-card__more,
+.page--detail[data-mode="quick"] .narrative-card__basis,
+.page--detail[data-mode="quick"] .compare-sum__head,
+.page--detail[data-mode="quick"] .compare-sum .sum-card:not(.sum-card--names),
+.page--detail[data-mode="quick"] #timelineBox,
+.page--detail[data-mode="quick"] .stepper__count,
+.page--detail[data-mode="quick"] .step-cta__step { display: none !important; }
+/* 형광펜 범례를 숨기므로 형광펜도 끕니다 (심화 탐구에서는 그대로) */
+.page--detail[data-mode="quick"] #narrativesGrid mark.hl { background: none; color: inherit; font-weight: inherit; padding: 0; }
+.page--detail[data-mode="quick"] .narrative-card { padding-top: 1rem; padding-bottom: 1rem; }
+.page--detail[data-mode="quick"] .narrative-card__text { line-height: 1.8; }
+.page--detail[data-mode="quick"] .stepper .flow-progress__list { margin-bottom: 0.2rem; }
+/* 아직 고르지 않은 질문의 아래 버튼은 '건너뛰기' — 눈에 덜 띄게 */
+.step-cta__main--quiet { background: var(--bg-card); color: var(--ink-soft); border: 1.5px solid var(--line); box-shadow: none; }
+.step-cta__main--quiet:hover { color: var(--accent); border-color: var(--accent); background: var(--bg-card); }
+
+.page--card[data-mode="quick"] #cardProgress,
+.page--card[data-mode="quick"] .page__desc,
+.page--card[data-mode="quick"] .card-builder__title,
+.page--card[data-mode="quick"] .card-builder__step { display: none; }
+.page--card[data-mode="quick"] .card-design { order: 1; }
+.page--card[data-mode="quick"] .card-actions__note,
+.page--card[data-mode="quick"] .choice-others { order: 2; }
+@media (max-width: 640px) {
+  .page--detail[data-mode="quick"] .narrative-card { padding: 0.9rem 0.95rem; }
+  .page--card[data-mode="quick"] .card-actions:not(.card-actions--more) {
+    position: sticky; bottom: 0; z-index: 5;
+    margin: 0 -1rem; padding: 0.55rem 1rem calc(0.55rem + env(safe-area-inset-bottom, 0px));
+    background: rgba(250, 247, 239, 0.94);
+    border-top: 1px solid var(--line);
+  }
 }
