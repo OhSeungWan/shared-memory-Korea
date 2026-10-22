@@ -588,18 +588,23 @@
       <section class="reflect-step" id="reflectStep" aria-labelledby="reflectPrompt">
         <div class="step-head">
           <p class="step-head__kicker">한 줄 소감 <small>(선택)</small></p>
-          <h3 class="step-head__q" id="reflectPrompt">탐구를 마친 지금, 이 역사에 대해 <span class="hl-ink">느낀 점</span>을 한 문장으로 남겨 볼까요?</h3>
-          <p class="step-head__desc">짧아도 괜찮아요. 쓰지 않고 넘어가도 카드는 만들어져요.</p>
+          <h3 class="step-head__q" id="reflectPrompt">탐구를 마친 지금, <span class="hl-ink">내 카드에 남길 소감</span>을 한 문장으로 적어 볼까요?</h3>
+          <p class="step-head__desc">적은 문장은 <strong>My Memory Card</strong>에 그대로 담겨요. 쓰지 않고 넘어가도 카드는 만들어져요.</p>
         </div>
+        <!-- 소감 입력을 가장 먼저 · 가장 크게 (카드에만 담김 · 서버로 보내지 않음) -->
+        <label class="reflect-label" for="reflectInput">내 카드에 남길 소감</label>
+        <textarea id="reflectInput" class="shared-form__textarea shared-form__textarea--main" rows="3" maxlength="300" aria-describedby="reflectHint" placeholder="예: 이름 하나에도 각 나라가 이 전쟁을 보는 눈이 담겨 있다는 게 새로웠다."></textarea>
+        <p class="guide-step__hint" id="reflectHint"><span id="reflectCount">0</span>/300자 · 내 카드에만 담기는 나만의 기록이에요 (서버로 보내지 않아요).</p>
         <div class="reflect-recap" id="reflectRecap"><!-- JS: 내가 고른 관점 --></div>
-        <label class="sr-only" for="reflectInput">나의 한 줄 소감</label>
-        <textarea id="reflectInput" class="shared-form__textarea shared-form__textarea--main" rows="3" maxlength="300" placeholder="예: 이름 하나에도 각 나라가 이 전쟁을 보는 눈이 담겨 있다는 게 새로웠다."></textarea>
-        <p class="guide-step__hint"><span id="reflectCount">0</span>/300자 · 이 문장은 카드에만 담기고, 어디에도 공개되지 않아요.</p>
 
-        <label class="consent-check consent-check--soft">
-          <input type="checkbox" id="choiceShareConsent" />
-          <span><strong>내가 고른 관점(객관식)만</strong> 익명 통계에 보태기 <small>(선택 · 고른 선택지 이름만 보내요. 소감·닉네임·연령대는 보내지 않습니다)</small></span>
-        </label>
+        <!-- 추가 선택: 소감 작성·카드와 무관한 객관식 익명 통계 동의 (기본 꺼짐 · 접혀 있음) -->
+        <details class="more-box reflect-extra" id="reflectExtra">
+          <summary class="more-box__summary">추가 선택 <small>객관식 익명 통계 · 소감·카드와 무관</small></summary>
+          <label class="consent-check consent-check--soft">
+            <input type="checkbox" id="choiceShareConsent" />
+            <span><strong>내가 고른 관점(객관식)만</strong> 익명 통계에 보태기 <small>(선택 · 고른 선택지 이름만 보내요. 소감·닉네임·연령대는 보내지 않습니다)</small></span>
+          </label>
+        </details>
 
         <p class="deep-switch">
           내 문장을 다른 사람들과 나누고 싶다면 <button type="button" class="before-card__link" data-deep-switch="3">공동 표현 쓰기 (심화 탐구 · 공개는 별도 동의)</button>

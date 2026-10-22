@@ -103,6 +103,12 @@ run('quick-experience', async ({ browser, base, check, mockPage }) => {
   const recap = await page.$eval('#reflectRecap', el => el.innerText);
   check('내가 고른 관점 다시 보기 (건너뛴 질문은 없음)', /서로 다른 이름을 함께 보여 주는 것/.test(recap) && /서로 다른 이름과 시선/.test(recap) && !/꼭 기억할 장면/.test(recap), recap);
   check('통계 동의는 기본 꺼짐', !(await page.isChecked('#choiceShareConsent')));
+  check('통계 동의는 소감 입력 아래 접힌 "추가 선택"에 따로 (소감 작성과 분리)', !(await page.isVisible('#choiceShareConsent')) &&
+    /추가 선택/.test(await page.textContent('#reflectExtra > summary')) &&
+    await page.evaluate(() => !!(document.getElementById('reflectInput').compareDocumentPosition(document.getElementById('reflectExtra')) & Node.DOCUMENT_POSITION_FOLLOWING)));
+  check('소감 입력란 이름 "내 카드에 남길 소감" · 카드에 담긴다는 안내', /내 카드에 남길 소감/.test(await page.textContent('label[for="reflectInput"]')) &&
+    await page.isVisible('label[for="reflectInput"]') && /My Memory Card/.test(await page.textContent('#reflectStep .step-head__desc')));
+  check('소감 입력란이 첫 화면 안에 보임 (모바일)', await inViewport(page, '#reflectInput'));
   check('버튼은 하나: 소감이 비어 있으면 "소감 없이 카드 만들기"', JSON.stringify(await visibleMains(page)) === '["q3"]' &&
     /소감 없이 카드 만들기/.test(await page.textContent('[data-step-main="q3"]')) && !(await page.$('[data-reflect-skip]')));
   await page.fill('#reflectInput', '가');
@@ -141,6 +147,7 @@ run('quick-experience', async ({ browser, base, check, mockPage }) => {
   check('카드에서 돌아오면 STEP 3, 고른 관점 그대로', (await step(page)) === 'quick:3' && /서로 다른 이름을 함께 보여 주는 것/.test(await page.$eval('#reflectRecap', el => el.innerText)));
   const REFLECT = '이름 하나에도 각 나라가 이 전쟁을 보는 눈이 담겨 있다는 게 새로웠다.';
   await page.fill('#reflectInput', REFLECT);
+  if (!(await page.$eval('#reflectExtra', el => el.open))) await page.click('#reflectExtra > summary');   // 추가 선택 펼치기
   await page.check('#choiceShareConsent');
   await page.click('[data-step-main="q3"]');
   await page.waitForSelector('.page--card.active');
@@ -212,6 +219,7 @@ run('quick-experience', async ({ browser, base, check, mockPage }) => {
   check('새 질문이 뜬 직후의 터치는 무시 (질문 2는 고르지 않은 채)', /질문 2\/3/.test(await page.$eval('#choiceStep', el => el.textContent)) &&
     (await page.$$eval('#choiceStep [aria-checked="true"]', els => els.length)) === 0);
   for (let i = 0; i < 2; i++) await page.click('[data-step-main="q2"]');
+  if (!(await page.$eval('#reflectExtra', el => el.open))) await page.click('#reflectExtra > summary');   // 추가 선택 펼치기
   await page.check('#choiceShareConsent');
   await page.click('[data-step-main="q3"]');
   await page.waitForSelector('.page--card.active');
