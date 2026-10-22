@@ -3544,3 +3544,154 @@ body { word-break: keep-all; overflow-wrap: break-word; }
 .memory-card__fifth-list { list-style: none; display: grid; gap: 0.35rem; font-size: var(--fs-md); line-height: var(--lh-text); }
 .memory-card__fifth-list li { padding-left: 1.1rem; position: relative; }
 .memory-card__fifth-list li::before { content: ''; position: absolute; left: 0; top: 0.75em; width: 0.6rem; height: 2px; background: var(--accent); }
+
+
+/* ============================================================
+   21. 기본 체험 — 큰 사건 카드 · 관점 고르기(객관식) · 한 줄 소감
+   · 기존 변수(한지·먹색·accent·국가 색)와 서체 역할만 씁니다. 새 색 없음.
+   · 휴대폰에서 한 손으로 누를 수 있도록 선택지·버튼은 48px 이상입니다.
+   ============================================================ */
+
+/* ---------- 21-1. 첫 화면: 바로 시작하는 사건 카드 ---------- */
+.quick-picks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin: 1.1rem 0 0.7rem;
+  max-width: 640px;
+}
+.quick-pick {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  gap: 0.25rem 0.9rem;
+  align-items: center;
+  text-align: left;
+  min-height: 112px;
+  padding: 1rem 1.1rem;
+  background: var(--bg-card);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 4px 4px 0 var(--accent-soft);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.quick-pick:hover { transform: translate(-1px, -1px); box-shadow: 6px 6px 0 var(--accent-soft); border-color: var(--accent); }
+.quick-pick:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.quick-pick:active { transform: translate(1px, 1px); box-shadow: 2px 2px 0 var(--accent-soft); }
+.quick-pick__seal {
+  grid-row: 1 / span 2;
+  width: 3.1rem; height: 3.1rem;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent); color: #fff;
+  font-family: var(--font-serif); font-weight: 900; font-size: 1.7rem;
+  border-radius: 2px; transform: rotate(-2deg);
+}
+.quick-pick--zainichi .quick-pick__seal { background: var(--japan); }
+.quick-pick__body { display: flex; flex-direction: column; min-width: 0; }
+.quick-pick__era { font-family: var(--font-latin); color: var(--accent); font-size: var(--fs-sm); }
+.quick-pick__title { font-family: var(--font-display); font-size: 1.45rem; line-height: var(--lh-tight); }
+.quick-pick__q { font-size: var(--fs-sm); color: var(--ink-soft); margin-top: 0.15rem; }
+.quick-pick__go {
+  grid-column: 2;
+  justify-self: start;
+  font-size: var(--fs-sm); font-weight: 700; color: var(--accent);
+  border-bottom: 1.5px solid var(--accent);
+}
+.hero__cta--secondary { margin-top: 0.4rem; }
+.hero__cta--secondary .btn { min-height: 44px; }
+
+/* ---------- 21-2. 기본 체험 모드에서 숨기는 것 (기능은 심화 탐구에 그대로) ---------- */
+.quick-only { display: none; }
+.page--detail[data-mode="quick"] .quick-only { display: block; }
+.page--detail[data-mode="quick"] #beforeCard,
+.page--detail[data-mode="quick"] .tabs,
+.page--detail[data-mode="quick"] .fourth-cta,
+.page--detail[data-mode="quick"] .deeper { display: none !important; }
+/* 기존 'STEP 1에서는 탭 내용을 숨김' 규칙보다 우선: 기본 체험 STEP 1은 세 나라 비교 화면입니다 */
+.page--detail[data-mode="quick"][data-step="1"] .tab-content.active { display: block !important; }
+.page--detail[data-mode="quick"] .detail__desc { display: none; }
+.page--detail[data-mode="quick"][data-step="2"] .detail__question,
+.page--detail[data-mode="quick"][data-step="3"] .detail__question { display: none; }
+.page--detail[data-mode="quick"][data-step="2"] .tab-content,
+.page--detail[data-mode="quick"][data-step="3"] .tab-content { display: none !important; }
+
+.choice-step, .reflect-step { display: none; }
+.page--detail[data-mode="quick"][data-step="2"] .choice-step { display: block; }
+.page--detail[data-mode="quick"][data-step="3"] .reflect-step { display: block; }
+
+.deep-switch { font-size: var(--fs-sm); color: var(--ink-soft); margin: 1.2rem 0 0.4rem; }
+.stepper__mode { font-size: var(--fs-sm); color: var(--ink-soft); margin-top: 0.4rem; }
+
+/* ---------- 21-3. 관점 고르기 ---------- */
+.choice-step { max-width: 720px; }
+.choice-step__count { margin-left: 0.4rem; color: var(--ink-mute); font-weight: 500; }
+.choice-step__dots { display: flex; gap: 0.35rem; margin: 0.2rem 0 0.6rem; }
+.choice-step__dots i { width: 1.6rem; height: 4px; border-radius: 2px; background: var(--line); }
+.choice-step__dots i.is-done { background: var(--accent-soft); }
+.choice-step__dots i.is-current { background: var(--accent); }
+.choice-options { display: grid; gap: 0.6rem; margin: 1rem 0 0.8rem; }
+.choice-option {
+  display: flex; align-items: center; gap: 0.8rem;
+  width: 100%; min-height: 56px;
+  padding: 0.85rem 1rem;
+  text-align: left;
+  background: var(--bg-card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.choice-option:hover { border-color: var(--accent); }
+.choice-option:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.choice-option__mark {
+  flex: none; width: 1.4rem; height: 1.4rem; border-radius: 50%;
+  border: 1.5px solid var(--ink-mute);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: var(--fs-xs); color: #fff;
+}
+.choice-option.is-selected { border-color: var(--accent); background: var(--bg-soft); box-shadow: inset 4px 0 0 var(--accent); }
+.choice-option.is-selected .choice-option__mark { background: var(--accent); border-color: var(--accent); }
+.choice-step__note { font-size: var(--fs-xs); color: var(--ink-mute); }
+
+/* ---------- 21-4. 한 줄 소감 ---------- */
+.reflect-step { max-width: 720px; }
+.reflect-recap {
+  background: var(--bg-soft); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+  border-radius: var(--radius); padding: 0.8rem 1rem; margin: 0.4rem 0 1rem;
+}
+.reflect-recap__label { font-size: var(--fs-xs); color: var(--accent); font-weight: 600; margin-bottom: 0.3rem; }
+.reflect-recap__list { list-style: none; display: grid; gap: 0.35rem; font-size: var(--fs-md); }
+.reflect-recap__list small { display: block; font-size: var(--fs-2xs); color: var(--ink-mute); }
+.reflect-skip { display: inline-block; margin: 0.4rem 0 1rem; min-height: 44px; }
+.consent-check--soft { background: var(--bg-card); border: 1px dashed var(--line); border-radius: var(--radius); padding: 0.75rem 0.9rem; }
+.consent-check--soft input:disabled + span { opacity: 0.55; }
+
+/* ---------- 21-5. 카드: 고른 관점 / 직접 쓴 소감 ---------- */
+.memory-card__choices { list-style: none; display: grid; gap: 0.5rem; }
+.memory-card__choices li { padding-left: 1.1rem; position: relative; font-family: var(--card-quote-font, var(--font-quote)); font-weight: 600; line-height: 1.5; }
+.memory-card__choices li::before { content: ''; position: absolute; left: 0; top: 1.7em; width: 0.6rem; height: 2px; background: var(--accent); }
+.memory-card__choices small { display: block; font-family: var(--font-ui); font-weight: 400; font-size: var(--fs-2xs); color: var(--ink-mute); }
+
+/* ---------- 21-6. 카드 화면: 다른 참여자들이 고른 관점 ---------- */
+.choice-others { margin-top: 1rem; background: var(--bg-card); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1rem 1.1rem; }
+.choice-others__title { font-size: var(--fs-lg); margin-bottom: 0.3rem; }
+.choice-others__status { font-size: var(--fs-sm); color: var(--ink-soft); margin-bottom: 0.5rem; }
+.choice-others__q { border-top: 1px solid var(--line); padding-top: 0.7rem; margin-top: 0.7rem; }
+.choice-others__prompt { font-weight: 600; font-size: var(--fs-sm); margin-bottom: 0.35rem; }
+.choice-others__list { list-style: none; display: grid; gap: 0.35rem; }
+.choice-others__list li { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 2.6rem; gap: 0.5rem; align-items: center; font-size: var(--fs-xs); }
+.choice-others__list li.is-mine .choice-others__label { color: var(--accent); }
+
+@media (max-width: 640px) {
+  .quick-picks { grid-template-columns: 1fr; gap: 0.6rem; margin-top: 0.9rem; }
+  .quick-pick { min-height: 92px; padding: 0.85rem 0.95rem; }
+  .quick-pick__title { font-size: 1.3rem; }
+  .choice-option { font-size: var(--fs-md); min-height: 56px; }
+  .choice-others__list li { grid-template-columns: 1fr 2.6rem; }
+  .choice-others__list li .nlp-bar { grid-column: 1 / -1; grid-row: 2; }
+}

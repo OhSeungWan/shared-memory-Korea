@@ -19,7 +19,8 @@
 })(typeof self !== 'undefined' ? self : this, function (Themes) {
   'use strict';
 
-  const LIMITS = { before: 500, after: 1000, discovery: 120, question: 120, customDiscovery: 80 };
+  const LIMITS = { before: 500, after: 1000, discovery: 120, question: 120, customDiscovery: 80, choiceQuestion: 60, choiceAnswer: 80 };
+  const MAX_CHOICES = 5;
   const MAX_DISCOVERIES = 3;
   const COUNTRY_NAMES = { korea: '한국', japan: '일본', china: '중국' };
 
@@ -172,11 +173,19 @@
 
   /**
    * 카드에 들어갈 내용을 만듭니다. 입력이 없는 항목은 비워 두고(카드에서 숨김), 지어내지 않습니다.
-   * @param {{event, before, after, discoveries, customDiscovery, question, change, fifth, flow, published, date}} input
+   * 기본 체험(mode: 'quick')에서는 after = 직접 쓴 '한 줄 소감'(건너뛰면 빈 값), choices = 객관식으로 고른 관점입니다.
+   * 두 가지를 섞지 않고 따로 담습니다(카드에서도 따로 표시).
+   * @param {{event, mode, choices, before, after, discoveries, customDiscovery, question, change, fifth, flow, published, date}} input
    */
   function buildCardModel(input) {
     const i = input || {};
     const event = i.event || {};
+    const quick = i.mode === 'quick';
+    const choices = (Array.isArray(i.choices) ? i.choices : [])
+      .filter(c => c && !c.skipped && c.answer)
+      .map(c => ({ question: cleanText(c.question, LIMITS.choiceQuestion), answer: cleanText(c.answer, LIMITS.choiceAnswer) }))
+      .filter(c => c.answer)
+      .slice(0, MAX_CHOICES);
     const before = cleanText(i.before, LIMITS.before);
     const after = cleanText(i.after, LIMITS.after);
     const picked = (Array.isArray(i.discoveries) ? i.discoveries : [])
@@ -190,6 +199,8 @@
 
     return {
       eventId: event.id || '',
+      mode: quick ? 'quick' : 'classic',
+      choices,
       title: event.title || '',
       era: event.era || '',
       mark: event.mark || '共',
@@ -201,7 +212,12 @@
       myQuestion: cleanText(i.question, LIMITS.question),
       change,
       fifth: after ? fifthNarrator(i.fifth) : null,
-      stamps: [
+      stamps: quick ? [
+        { id: 'compare', mark: '讀', label: '세 나라 서술', done: !!flow.viewedCompare },
+        { id: 'choices', mark: '擇', label: '관점 고르기', done: choices.length > 0 },
+        { id: 'reflect', mark: '書', label: '한 줄 소감', done: !!after },
+        { id: 'shared', mark: '共', label: '공개 참여', done: !!i.published }
+      ] : [
         { id: 'compare', mark: '讀', label: '세 나라 서술', done: !!flow.viewedCompare },
         { id: 'nlp', mark: '析', label: '비교 분석', done: !!flow.viewedNlp },
         { id: 'sources', mark: '史', label: '사료 확인', done: !!flow.viewedSources },
@@ -209,7 +225,8 @@
       ],
       tiers: { before: lengthTier(before), after: lengthTier(after) },
       date: formatDate(i.date),
-      ready: !!after
+      // 기본 체험은 소감을 건너뛰어도 고른 관점이 있으면 카드를 만들 수 있습니다.
+      ready: quick ? (!!after || choices.length > 0) : !!after
     };
   }
 
@@ -392,6 +409,27 @@
     }
     rule(40);
 
+    if (model.mode === 'quick') {
+      // 기본 체험: 고른 관점(객관식) → 직접 쓴 한 줄 소감. 둘을 다른 칸·다른 이름으로 나눕니다.
+      label('내가 고른 관점 · 객관식');
+      if (model.choices.length) {
+        model.choices.forEach(ch => {
+          y += 14;
+          block(ch.question, `500 22px ${UI}`, C.mute, 34, 1, 30);
+          bullet(ch.answer, lim.item);
+        });
+      } else {
+        block('고른 관점이 없어요. (질문을 모두 건너뜀)', `400 26px ${UI}`, C.mute, 40, 1);
+      }
+      rule(40);
+      label('나의 한 줄 소감 · 직접 쓴 문장');
+      if (model.after) {
+        const as = AFTER_SIZE[model.tiers.after];
+        block(`“${model.after}”`, `${QF.weight} ${as}px ${QF.family}`, C.ink, Math.round(as * 1.5), lim.after);
+      } else {
+        block('소감은 남기지 않았어요.', `400 26px ${UI}`, C.mute, 40, 1);
+      }
+    } else {
     // 탐구 전
     label('탐구 전 · 나의 첫 생각');
     if (model.before) {
@@ -415,6 +453,7 @@
       const chFont = `400 25px ${UI}`;
       if (model.change.added.length) block(`새로 쓴 말  ${model.change.added.join(' · ')}`, chFont, C.soft, 40, 2);
       if (model.change.kept.length) block(`계속 쓴 말  ${model.change.kept.join(' · ')}`, chFont, C.mute, 40, 2);
+    }
     }
 
     if (model.fifth) {
@@ -447,7 +486,7 @@
 
     // 하단
     y += 56;
-    text('참여자가 직접 쓴 문장으로 만든 카드입니다. 정답이나 점수를 뜻하지 않습니다.', `400 20px ${UI}`, C.mute, PAD, y);
+    text(footNote(model), `400 20px ${UI}`, C.mute, PAD, y);
     const noteY = y;
     y += 36;
     text('共  Shared Memory · 동북아 역사 공동 기억 프로젝트', `600 22px ${SERIF}`, C.accent, PAD, y);
@@ -497,6 +536,74 @@
     return { size: s, lineH, lines: r.lines, truncated: r.truncated };
   }
 
+  function footNote(model) {
+    return model.mode === 'quick'
+      ? '고른 관점과 직접 쓴 문장으로 만든 카드예요. 정답이나 점수가 아닙니다.'
+      : '참여자가 직접 쓴 문장으로 만든 카드입니다. 정답이나 점수를 뜻하지 않습니다.';
+  }
+
+  /**
+   * 스토리 가운데 칸 — 기본 체험: 고른 관점(객관식) 목록 → 한 줄 소감(있으면 남은 높이에 맞는 가장 큰 글자).
+   * 소감이 없으면 고른 관점을 조금 더 크게 보여줍니다.
+   */
+  function storyQuick(ops, text, measureWith, model, C, g) {
+    const { X, IW, midTop, avail, UI, QF, TF } = g;
+    let truncated = false;
+    const hasAfter = !!model.after;
+    const ansSize = hasAfter ? 34 : 40;
+    const ansLH = Math.round(ansSize * 1.4);
+    const qFont = `500 23px ${UI}`;
+    const ansFont = `600 ${ansSize}px ${QF.family}`;
+    const labelH = 52;
+    const choiceBlocks = model.choices.map(ch => {
+      const a = wrapText(ch.answer, IW - 30, measureWith(ansFont), 2);
+      if (a.truncated) truncated = true;
+      return { q: ch.question, lines: a.lines };
+    });
+    const choicesH = labelH + (choiceBlocks.length
+      ? choiceBlocks.reduce((sum, b) => sum + 34 + b.lines.length * ansLH + 16, 0)
+      : 48);
+    const afterLabelH = 52 + 34;
+    let fit = null;
+    if (hasAfter) {
+      fit = storyFit(`“${model.after}”`, IW, Math.max(80, avail - choicesH - afterLabelH), s => measureWith(`${QF.weight} ${s}px ${QF.family}`), STORY_SIZES.slice(2));
+      if (fit.truncated) truncated = true;
+    }
+    const used = choicesH + (hasAfter ? afterLabelH + fit.lines.length * fit.lineH : afterLabelH + 40);
+    let m = midTop + Math.max(0, (avail - used) * 0.4);
+
+    m += 30; text('내가 고른 관점 · 객관식', `600 24px ${UI}`, C.accent, X, m);
+    m += 22;
+    if (choiceBlocks.length) {
+      choiceBlocks.forEach(b => {
+        m += 34; text(b.q, qFont, C.mute, X + 30, m);
+        const top = m + 12;
+        ops.push(k => { k.fillStyle = C.accent; k.fillRect(X, top + Math.round(ansLH * 0.45), 16, 4); });
+        b.lines.forEach(l => { m += ansLH; text(l, ansFont, C.ink, X + 30, m); });
+        m += 16;
+      });
+    } else {
+      m += 48; text('고른 관점이 없어요. (질문을 모두 건너뜀)', `400 26px ${UI}`, C.mute, X, m);
+    }
+
+    m += 52; text('나의 한 줄 소감 · 직접 쓴 문장', `600 24px ${UI}`, C.accent, X, m);
+    m += 18;
+    let afterSize = null;
+    if (hasAfter) {
+      afterSize = fit.size;
+      const quoteY = m;
+      ops.push(k => {
+        k.save(); k.font = `${TF.weight} 200px ${TF.family}`; k.fillStyle = C.accent; k.globalAlpha = 0.1; k.textAlign = 'left'; k.textBaseline = 'top';
+        k.fillText('“', X + IW - 140, quoteY - 30); k.restore();
+      });
+      const afterFont = `${QF.weight} ${fit.size}px ${QF.family}`;
+      fit.lines.forEach(l => { m += fit.lineH; text(l, afterFont, C.ink, X, m - Math.round(fit.size * 0.18)); });
+    } else {
+      m += 40; text('소감은 남기지 않았어요.', `400 26px ${UI}`, C.mute, X, m);
+    }
+    return { truncated, afterSize, bottom: m };
+  }
+
   function drawStory(canvas, model, theme) {
     const W = 1080, H = 1920, C = theme.colors;
     canvas.width = W;
@@ -536,6 +643,18 @@
     rule(bottomRule);
     const midBottom = stampsCy - stampR - 40;
     const avail = midBottom - midTop;
+
+    if (model.mode === 'quick') {
+      const r = storyQuick(ops, text, measureWith, model, C, { X, IW, midTop, avail, UI, QF, TF });
+      truncated = r.truncated;
+      text(truncated ? '고른 관점과 직접 쓴 문장으로 만든 카드예요. (긴 문장은 일부 생략)' : footNote(model), `400 21px ${UI}`, C.mute, X, noteY);
+      text('共  Shared Memory · 동북아 역사 공동 기억 프로젝트', `600 24px ${SERIF}`, C.accent, X, signY);
+      const qo = { format: 'story', seed: model.eventId || 'card', panel: P, mark: model.mark, inner: inset(P, OVERLAY_INSET) };
+      paintUnder(c, theme, W, H, qo);
+      ops.forEach(op => op(c));
+      paintOver(c, theme, W, H, qo);
+      return { width: W, height: H, truncated, theme: theme.id, format: 'story', layout: { panel: P, inner: { x: X, y: P.y + 40, w: IW, h: signY - P.y - 40 }, afterSize: r.afterSize, contentBottom: Math.max(r.bottom, signY) } };
+    }
 
     // 가운데: 탐구 전(작게) → 탐구 후(크게) → 새로 쓴 말
     const added = model.change && model.change.added ? model.change.added.slice(0, 5) : [];
@@ -635,9 +754,10 @@
     const m = model || {};
     const uniq = str => Array.from(new Set(Array.from(String(str || '').replace(/\s+/g, '')))).join('') || 'A';
     const stamps = (m.stamps || []).map(x => x.mark + x.label).join('');
-    const labels = '탐구전·나의첫생각후한문장새로쓴말계속다섯번째서술자내가담은것하며롭게발견관점아직남은질문참여자직접만든카드입니다정답이나점수를뜻하지않습니다긴일부생략↓';
-    const quotes = [m.before, m.after, m.myQuestion, '“”'].join('');
-    const ui = [labels, stamps, (m.discoveries || []).join(''), (m.change ? m.change.added.concat(m.change.kept).join('') : ''),
+    const labels = '탐구전·나의첫생각후한문장새로쓴말계속다섯번째서술자내가담은것하며롭게발견관점아직남은질문참여자직접만든카드입니다정답이나점수를뜻하지않습니다긴일부생략↓고른객관식줄소감남기지았어요없모두건너뜀과()';
+    const choiceText = (m.choices || []).map(ch => ch.question + ch.answer).join('');
+    const quotes = [m.before, m.after, m.myQuestion, choiceText, '“”'].join('');
+    const ui = [labels, stamps, choiceText, (m.discoveries || []).join(''), (m.change ? m.change.added.concat(m.change.kept).join('') : ''),
       m.fifth ? JSON.stringify(m.fifth) : ''].join('');
     const out = [
       { font: `${F.title.weight} 64px ${F.title.family}`, text: uniq((m.title || '') + '“') },
@@ -667,6 +787,7 @@
   return {
     LIMITS,
     MAX_DISCOVERIES,
+    MAX_CHOICES,
     parseEventRoute,
     eventHash,
     eventLink,
