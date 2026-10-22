@@ -2249,6 +2249,10 @@ details.ai-result__section[open] > summary { margin-bottom: 0.75rem; }
 .archive-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin: 0.8rem 0 1.2rem; }
 .archive-card { display: flex; flex-direction: column; gap: 0.8rem; margin: 0; }
 .archive-card .shared-item__text { flex: 1; }
+/* 최신 참여 불러오기 (발표 중 새로고침 없이 갱신) */
+.data-refresh { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.8rem; margin: 0 0 1rem; }
+.data-refresh .nlp-meta { margin: 0; }
+.shared-empty .btn { margin-top: 0.8rem; }
 .archive__note { font-size: var(--fs-xs); color: var(--ink-mute); margin-top: 2rem; line-height: var(--lh-body); }
 
 /* 상단 메뉴: 넓은 화면은 전체 이름, 좁은 화면은 짧은 이름 */

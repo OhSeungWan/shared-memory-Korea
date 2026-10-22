@@ -32,6 +32,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
   <title>Shared Memory Project — 동북아 역사 공동 기억 프로젝트</title>
   <meta name="description" content="한국·일본·중국의 서로 다른 역사 서술을 살펴보고, 이 역사를 어떻게 기억하는지 한 문장으로 남기는 익명 참여 프로젝트" />
+  <!-- 메신저로 링크를 보낼 때 보이는 제목·설명 / 브라우저 탭 아이콘(별도 파일 없이 SVG, /favicon.ico 404 방지) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Shared Memory — 우리는 정말 같은 역사를 기억하고 있을까?" />
+  <meta property="og:description" content="한국·일본·중국의 서로 다른 역사 서술과 AI의 답을 비교하고, 내 생각을 한 문장으로 남기는 5분 익명 참여" />
+  <meta name="theme-color" content="#f4ede1" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%238b3a3a'/%3E%3Ctext x='32' y='46' font-size='40' text-anchor='middle' fill='%23fff' font-family='serif'%3E%E5%85%B1%3C/text%3E%3C/svg%3E" />
 
   <!-- 서체 — 모두 SIL Open Font License 1.1, 공식 배포처에서 불러옵니다 (README '타이포그래피' 참고)
        · Pretendard: 공식 GitHub 배포본(jsDelivr) — 페이지에 쓰인 글자만 내려받는 가변 다이내믹 서브셋
@@ -541,6 +547,10 @@
             참여자들이 등록한 공동 표현을 서로 비슷한 것끼리 묶어, 어떤 표현의 경향이 나타나는지 보여줍니다.<br />
             <small>※ 역사적 정답이나 “가장 올바른 표현”을 판정하는 기능이 아닙니다. 모든 수치는 Supabase에 저장된 실제 제안 텍스트에서 매번 계산됩니다.</small>
           </p>
+          <div class="data-refresh">
+            <button type="button" class="btn btn--small btn--ghost" data-shared-refresh>↻ 최신 참여 불러오기</button>
+            <span class="nlp-meta" id="memoryLoadedAt" aria-live="polite"></span>
+          </div>
           <div id="memoryResult">
             <!-- JS가 채워줍니다 -->
           </div>

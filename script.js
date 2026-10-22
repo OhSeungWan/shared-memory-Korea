@@ -2180,6 +2180,18 @@ async function submitSharedNarrative() {
    공동 표현 불러오기 · 목록
    ------------------------------------------------------------ */
 
+let sharedLoadingEventId = null;
+
+/** 마지막으로 불러온 시각 (발표 중 '최신 참여 불러오기'를 눌렀을 때 실제로 갱신됐는지 보여줌) */
+function setLoadedAt(id, ok) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  el.textContent = ok ? `${time} 기준` : '';
+}
+
+const RETRY_SHARED_HTML = '<div><button type="button" class="btn btn--small" data-shared-refresh>다시 시도</button></div>';
+
 async function loadSharedNarratives() {
   if (!currentEventId) {
     sharedNarratives = [];
@@ -2187,7 +2199,9 @@ async function loadSharedNarratives() {
     return;
   }
 
+  if (sharedLoadState === 'loading' && sharedLoadingEventId === currentEventId) return;   // 같은 사건을 이미 불러오는 중
   const eventId = currentEventId;
+  sharedLoadingEventId = eventId;
   sharedLoadState = 'loading';
   const list = document.getElementById('sharedList');
   if (list) list.innerHTML = '<div class="shared-empty">공동 표현을 불러오는 중입니다...</div>';
@@ -2207,6 +2221,8 @@ async function loadSharedNarratives() {
     Store.fetchAgeGroupParticipants ? Store.fetchAgeGroupParticipants(eventId) : { available: false, counts: null }
   ]);
   if (eventId !== currentEventId) return;   // 불러오는 사이 다른 사건으로 이동한 경우
+  sharedLoadingEventId = null;
+  setLoadedAt('memoryLoadedAt', !res.error);
 
   if (res.error) {
     console.error('Supabase 불러오기 오류:', res.error);
@@ -2286,7 +2302,7 @@ function renderSharedList() {
   if (!list) return;
 
   if (sharedLoadState === 'error') {
-    list.innerHTML = `<div class="shared-empty">데이터를 불러오지 못했습니다. ${escapeHtml(sharedLoadError)}</div>`;
+    list.innerHTML = `<div class="shared-empty">데이터를 불러오지 못했습니다. ${escapeHtml(sharedLoadError)}${RETRY_SHARED_HTML}</div>`;
     return;
   }
 
@@ -2405,6 +2421,7 @@ async function handleEmpathy(id, button) {
 
 const ARCHIVE_PAGE_SIZE = 12;
 let archiveEventId = null;
+let archiveLoadedAt = '';
 let archiveItems = [];
 let archiveCounts = {};
 let archiveEmpathyAvailable = false;
@@ -2440,6 +2457,7 @@ async function loadArchive(eventId) {
   }
   const [res, emp] = await Promise.all([Store.loadExpressions(eventId), Store.fetchEmpathyCounts(eventId)]);
   if (eventId !== archiveEventId) return;   // 불러오는 사이 다른 사건을 고른 경우
+  archiveLoadedAt = res.error ? '' : new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   if (res.error) {
     archiveState = 'error';
     archiveError = res.error;
@@ -2464,7 +2482,11 @@ function renderArchive() {
       <div class="detail__era">${escapeHtml(event.era)}</div>
       <h3 class="archive__title">${escapeHtml(event.title)}</h3>
       ${event.question ? `<p class="detail__question"><span class="detail__question-label">역사적 질문</span>${escapeHtml(event.question)}</p>` : ''}
-      <button type="button" class="btn btn--small" data-archive-explore="${escapeAttr(event.id)}">이 사건 직접 탐구하기 →</button>
+      <div class="data-refresh">
+        <button type="button" class="btn btn--small" data-archive-explore="${escapeAttr(event.id)}">이 사건 직접 탐구하기 →</button>
+        <button type="button" class="btn btn--small btn--ghost" data-archive-refresh>↻ 최신 표현 불러오기</button>
+        <span class="nlp-meta">${archiveLoadedAt ? escapeHtml(archiveLoadedAt) + ' 기준' : ''}</span>
+      </div>
     `;
   }
 
@@ -2473,7 +2495,7 @@ function renderArchive() {
     return;
   }
   if (archiveState === 'error') {
-    list.innerHTML = `<div class="shared-empty">공동 표현을 불러오지 못했습니다. ${escapeHtml(archiveError)}</div>`;
+    list.innerHTML = `<div class="shared-empty">공동 표현을 불러오지 못했습니다. ${escapeHtml(archiveError)}<div><button type="button" class="btn btn--small" data-archive-refresh>다시 시도</button></div></div>`;
     return;
   }
   if (!archiveItems.length) {
@@ -2540,6 +2562,10 @@ document.querySelector('.page--archive')?.addEventListener('click', e => {
   if (e.target.closest('[data-archive-more]')) {
     archiveVisible += ARCHIVE_PAGE_SIZE;
     renderArchive();
+    return;
+  }
+  if (e.target.closest('[data-archive-refresh]')) {
+    if (archiveState !== 'loading') loadArchive(archiveEventId);
     return;
   }
   const explore = e.target.closest('[data-archive-explore]');
@@ -2764,7 +2790,7 @@ function renderMemoryTab() {
     return;
   }
   if (sharedLoadState === 'error') {
-    box.innerHTML = `<div class="shared-empty">공동 표현을 불러오지 못해 분석할 수 없습니다. ${escapeHtml(sharedLoadError)}</div>`;
+    box.innerHTML = `<div class="shared-empty">공동 표현을 불러오지 못해 분석할 수 없습니다. ${escapeHtml(sharedLoadError)}${RETRY_SHARED_HTML}</div>`;
     return;
   }
   if (!expressionAnalysis || expressionAnalysis.total === 0) {
@@ -4187,6 +4213,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('.page--detail')?.addEventListener('click', e => {
     const goto = e.target.closest('[data-goto-tab]');
     if (goto) { gotoTab(goto.dataset.gotoTab); return; }
+    if (e.target.closest('[data-shared-refresh]')) { loadSharedNarratives(); return; }
     const source = e.target.closest('[data-goto-source]');
     if (source) { gotoSource(source.dataset.gotoSource); return; }
     const evidence = e.target.closest('[data-evidence-term]');
