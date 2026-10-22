@@ -233,6 +233,7 @@ function openEventDetail(eventId) {
   renderGlance();
   renderCompareSummary(event);
   fourthRunChoice = {};
+  fourthLangShown = null;
   renderFourthTab(event);
   renderSourcesTab();
   resetGuide(event);
@@ -331,6 +332,7 @@ function switchTab(tabName) {
    ------------------------------------------------------------ */
 
 let fourthRunChoice = {};             // 언어별로 지금 보고 있는 답변 회차 (lang → run)
+let fourthLangShown = null;           // 좁은 화면에서 지금 보이는 언어 카드 (넓은 화면은 세 카드를 나란히)
 const NARRATOR_SHORT = { korea: '한국 측', japan: '일본 측', china: '중국 측', 'ai-ko': 'AI · 한국어', 'ai-ja': 'AI · 일본어', 'ai-zh': 'AI · 중국어' };
 const AI_HTML_LANG = { ko: 'ko', ja: 'ja', zh: 'zh-Hans' };
 
@@ -354,6 +356,42 @@ function renderFourthTab(event) {
   }
   box.innerHTML = renderFourthNarrator(event, a);
   gapBox.innerHTML = renderMemoryGaps(a);
+}
+
+/**
+ * AI 답변 원문의 Markdown(제목 #, 굵게 **, 목록 - · 1.)을 화면에서만 읽기 좋게 바꿉니다.
+ * · 원문 데이터는 그대로 둡니다. NLP·빈자리 계산도 원문으로 합니다.
+ * · 모든 글자를 먼저 escapeHtml로 바꾼 뒤, 정해 둔 태그(p·ul·ol·li·strong)만 직접 붙입니다 → 답변 속 HTML은 글자로만 보입니다.
+ */
+function renderAnswerHtml(text) {
+  const inline = t => escapeHtml(t).replace(/\*\*(\S(?:.*?\S)?)\*\*/g, '<strong>$1</strong>');
+  const out = [];
+  let para = [];
+  let list = null;
+  const flushPara = () => { if (para.length) out.push(`<p>${para.map(inline).join('<br>')}</p>`); para = []; };
+  const flushList = () => {
+    if (list) out.push(`<${list.tag}${list.start > 1 ? ` start="${list.start}"` : ''}>${list.items.map(i => `<li>${inline(i)}</li>`).join('')}</${list.tag}>`);
+    list = null;
+  };
+  String(text == null ? '' : text).replace(/\r\n?/g, '\n').split('\n').forEach(line => {
+    const heading = line.match(/^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/);
+    const bullet = line.match(/^\s*[-*•]\s+(.+)$/);
+    const numbered = line.match(/^\s*(\d{1,3})[.)]\s+(.+)$/);
+    if (!line.trim() || /^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { flushPara(); flushList(); return; }
+    if (heading) { flushPara(); flushList(); out.push(`<p class="md-h">${inline(heading[1].replace(/\*\*/g, ''))}</p>`); return; }
+    if (bullet || numbered) {
+      flushPara();
+      const tag = bullet ? 'ul' : 'ol';
+      if (!list || list.tag !== tag) { flushList(); list = { tag, start: numbered ? Number(numbered[1]) : 1, items: [] }; }
+      list.items.push(bullet ? bullet[1] : numbered[2]);
+      return;
+    }
+    flushList();
+    para.push(line.trim());
+  });
+  flushPara();
+  flushList();
+  return out.join('');
 }
 
 function fourthQuestionsHtml(eventId, open) {
@@ -384,6 +422,15 @@ function renderFourthNarrator(event, a) {
       </section>`;
   }
   const rowsFor = key => a.rows.filter(r => r.cells[key] && r.cells[key].present);
+  const nameChip = (x, count) => {
+    const shown = x.forms.length && x.forms.indexOf(x.label) < 0 ? `${x.label} (${x.forms[0]})` : x.label;
+    return `<span class="narrative-card__keyword">${escapeHtml(shown)} <small>${x.runs}회 중 ${count}회</small></span>`;
+  };
+  const shownLang = ai.some(n => n.lang === fourthLangShown) ? fourthLangShown : ai[0].lang;
+  const langSwitch = ai.length > 1 ? `
+      <div class="fourth-langs" role="group" aria-label="볼 언어 선택">
+        ${ai.map(n => `<button type="button" class="fourth-runs__btn${n.lang === shownLang ? ' is-active' : ''}" data-ai-show="${n.lang}" aria-pressed="${n.lang === shownLang}">${Narrator.AI_LANG_LABEL[n.lang]}로 물었을 때</button>`).join('')}
+      </div>` : '';
   const cards = ai.map(n => {
     const recs = n.records;
     const chosen = recs.find(r => r.run === fourthRunChoice[n.lang]) || recs[0];
@@ -392,29 +439,31 @@ function renderFourthNarrator(event, a) {
         ${recs.map(r => `<button type="button" class="fourth-runs__btn${r === chosen ? ' is-active' : ''}" data-ai-lang="${n.lang}" data-ai-run="${r.run}" aria-pressed="${r === chosen}">${r.run}회</button>`).join('')}
       </div>` : '';
     const names = a.names.byNarrator[n.key] || [];
-    const namesHtml = names.length
-      ? names.map(x => `<span class="narrative-card__keyword">${escapeHtml(x.label)} <small>${x.runs}회 중 ${x.hits}회</small></span>`).join('')
-      : '<span class="nlp-meta">사건 이름 목록에 있는 이름이 나오지 않았습니다</span>';
+    const firstNames = names.filter(x => x.first > 0).sort((p, q) => q.first - p.first);
+    const namesHtml = names.length ? `
+        <div class="narrative-card__label">가장 먼저 쓴 이름 <small class="nlp-meta">(답변이 앞세운 이름)</small></div>
+        <div class="narrative-card__keywords">${firstNames.map(x => nameChip(x, x.first)).join('')}</div>
+        <div class="narrative-card__label">답변에 나온 이름 <small class="nlp-meta">(다른 나라의 이름을 소개한 경우 포함)</small></div>
+        <div class="narrative-card__keywords">${names.map(x => nameChip(x, x.hits)).join('')}</div>` : '';
     const elements = rowsFor(n.key).slice(0, 8)
       .map(r => `<span class="nlp-chip nlp-chip--static">${escapeHtml(r.label)}<small>${r.cells[n.key].hits}/${r.cells[n.key].runs}</small></span>`).join('');
     const translation = chosen.translationKo ? `
       <details class="fourth-card__translation">
         <summary>한국어 참고 번역 (AI 번역)</summary>
-        <p>${escapeHtml(chosen.translationKo)}</p>
+        <div class="md">${renderAnswerHtml(chosen.translationKo)}</div>
       </details>` : '';
     const date = formatSharedDate(chosen.collectedAt);
     return `
-      <article class="fourth-card">
+      <article class="fourth-card${n.lang === shownLang ? ' is-shown' : ''}" data-ai-card="${n.lang}">
         <header class="fourth-card__head">
           <span class="fourth-card__mark" aria-hidden="true">AI</span>
           <div><div class="fourth-card__title">${escapeHtml(n.label)}</div>
             <div class="nlp-meta">같은 질문 ${recs.length}회 · 지금 보는 답변 ${chosen.run}회차</div></div>
         </header>
         ${runButtons}
-        <p class="fourth-card__answer" lang="${AI_HTML_LANG[n.lang]}">${escapeHtml(chosen.answer)}</p>
+        <div class="fourth-card__answer md" lang="${AI_HTML_LANG[n.lang]}">${renderAnswerHtml(chosen.answer)}</div>
         ${translation}
-        <div class="narrative-card__label">부른 이름</div>
-        <div class="narrative-card__keywords">${namesHtml}</div>
+        ${namesHtml}
         <div class="narrative-card__label">자주 나온 요소 <small class="nlp-meta">(물은 횟수 중 나온 횟수)</small></div>
         <div class="nlp-chips">${elements || '<span class="nlp-meta">개념 사전과 일치하는 요소가 없습니다</span>'}</div>
         <p class="fourth-card__meta">모델 ${escapeHtml(chosen.model)}${chosen.servedByFallback ? ' (처음 요청한 모델이 답하지 않아 대체 모델이 답함)' : ''}${date ? ` · ${escapeHtml(date)} 수집` : ''} · 시스템 지시 없이 새 대화에서 질문</p>
@@ -426,9 +475,22 @@ function renderFourthNarrator(event, a) {
       <div class="narrative-card__label">편집자 관찰 <small class="nlp-meta">(사람이 답변을 읽고 쓴 관찰 — 판정이 아닙니다)</small></div>
       <ul>${notes.map(t => `<li>${escapeHtml(t)}</li>`).join('')}</ul>
     </div>` : '';
+  const first = ai[0].records[0];
+  const models = [...new Set(ai.reduce((acc, n) => acc.concat(n.records.map(r => r.model)), []))].join(', ');
+  const runs = Math.max(...ai.map(n => n.records.length));
+  const gapCount = kind => a.gaps.filter(g => (g.narrator.indexOf('ai-') === 0) === (kind === 'ai')).length;
   return `
     <section class="fourth-section">
       <h4 class="section-h section-h--small">네 번째 서술자 — AI의 서술</h4>
+      <div class="fourth-intro">
+        <p><strong>이렇게 읽어 보세요</strong> ① 어떤 이름을 먼저 쓰는지 ② 누가 무엇을 했다고 쓰는지(주어·동사) ③ 무엇이 빠졌는지</p>
+        <p class="nlp-meta">세 나라 서술은 이 프로젝트 편집자가 쓴 짧은 요약이고, 아래 카드는 AI가 쓴 답변 원문입니다
+          (${escapeHtml(models)} · ${escapeHtml(formatSharedDate(first.collectedAt))} 수집 · 언어마다 새 대화에서 같은 질문 ${runs}회 · 시스템 지시 없음).
+          언어마다 ${runs}회뿐인 작은 표본입니다.</p>
+        <p class="fourth-intro__count">이 사건에서 계산된 빈자리 — AI 세 언어 답변 <strong>${gapCount('ai')}곳</strong> · 세 나라 요약 <strong>${gapCount('nation')}곳</strong>
+          <span class="nlp-meta">(세 나라 요약은 두세 문장짜리 짧은 글이라 긴 AI 답변과 나란히 놓으면 빈자리가 많이 잡힙니다)</span></p>
+      </div>
+      ${langSwitch}
       <div class="fourth-grid">${cards}</div>
       ${notesHtml}
       ${fourthQuestionsHtml(event.id, false)}
@@ -490,6 +552,7 @@ function renderMemoryGaps(a) {
       <p class="gap-legend"><span class="gap-legend__item"><b class="gap-legend__present">●</b> 있음</span>
         <span class="gap-legend__item"><b class="gap-legend__absent">○</b> 없음</span>
         <span class="gap-legend__item"><b class="gap-legend__gap">○</b> 빈자리 (다른 서술자 대부분에게는 있음)</span>
+        <span class="gap-legend__item">한국 측·일본 측·중국 측 = 편집자가 쓴 요약 서술${a.hasAi ? ' · AI · ○○어 = 그 언어로 물은 AI 답변' : ''}</span>
         ${a.hasAi ? '<span class="gap-legend__item">AI 칸의 숫자 = 물은 횟수 중 나온 횟수 (절반 이상이면 있음)</span>' : ''}</p>
       <details class="ai-result__section nlp-method">
         <summary class="ai-result__heading"><span>?</span><span>빈자리는 어떻게 계산하나요? (한계)</span></summary>
@@ -4229,6 +4292,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target.closest('[data-prior-action="edit"]')) { priorEditing = true; renderBeforeCard(); return; }
     const aiRun = e.target.closest('[data-ai-run]');
     if (aiRun) { fourthRunChoice[aiRun.dataset.aiLang] = Number(aiRun.dataset.aiRun); renderFourthTab(currentEvent()); return; }
+    const aiShow = e.target.closest('[data-ai-show]');
+    if (aiShow) { fourthLangShown = aiShow.dataset.aiShow; renderFourthTab(currentEvent()); return; }
     const stepGoto = e.target.closest('[data-step-goto]');
     if (stepGoto) { gotoStep(stepGoto.dataset.stepGoto); return; }
     if (e.target.closest('[data-step-back]')) { gotoStep(exploreStep - 1); return; }
