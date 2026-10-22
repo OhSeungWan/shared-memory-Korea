@@ -70,21 +70,41 @@ run('quick-experience', async ({ browser, base, check, mockPage }) => {
   check('질문·선택지·다음 버튼이 한 화면에', await inViewport(page, '#choicePrompt') && await inViewport(page, `[data-choice-option="${q1[3]}"]`) && await inViewport(page, '[data-step-main="q2"]'));
   check('고르기 전 아래 버튼은 "이 질문 건너뛰기" (덜 눈에 띄게)', /이 질문 건너뛰기/.test(await page.textContent('[data-step-main="q2"]')) &&
     await page.$eval('[data-step-main="q2"]', el => el.classList.contains('step-cta__main--quiet')));
-  // 키보드: 화살표로 둘러볼 때는 넘어가지 않음
+  check('안내: 고른 뒤 "다음 질문"을 누르고, 넘어가기 전에는 바꿀 수 있음', /고른 뒤 아래 ‘다음 질문’을 눌러/.test(await page.$eval('#choiceStep', el => el.textContent)) &&
+    /바꿀 수 있어요/.test(await page.$eval('#choiceStep', el => el.textContent)));
+  // 키보드: 화살표로 선택만 바뀜
   await page.focus(`[data-choice-option="${q1[0]}"]`);
   await page.keyboard.press('ArrowDown');
-  await page.waitForTimeout(600);
+  await page.waitForTimeout(400);
   check('화살표 키로는 선택만 바뀌고 다음 질문으로 넘어가지 않음', /질문 1\/3/.test(await page.$eval('#choiceStep', el => el.textContent)) &&
     (await page.$$eval('#choiceStep [aria-checked="true"]', els => els.length)) === 1);
-  // 누르면 선택 표시 후 바로 다음 질문 ('다음' 버튼을 따로 누르지 않음)
-  await tap('[data-choice-option="many_names"]');
-  check('누르면 선택 표시(aria-checked)가 먼저 보임', await page.$eval('[data-choice-option="many_names"]', el => el.getAttribute('aria-checked') === 'true'));
-  await page.waitForFunction(() => /질문 2\/3/.test(document.getElementById('choiceStep').textContent));
-  check('선택지를 누르면 다음 질문으로 바로 넘어감', true);
+  // 누르면 체크만 — 화면은 그대로 (자동으로 넘어가지 않음)
+  await tap('[data-choice-option="responsibility"]');
+  await page.waitForTimeout(800);
+  check('선택지를 누르면 체크 표시만, 0.8초 뒤에도 질문 1/3 그대로', /질문 1\/3/.test(await page.$eval('#choiceStep', el => el.textContent)) &&
+    await page.$eval('[data-choice-option="responsibility"]', el => el.getAttribute('aria-checked') === 'true' && el.classList.contains('is-selected')));
+  check('고르면 아래 버튼이 "다음 질문"(강조)으로 바뀜', (await page.textContent('[data-step-main="q2"]')).trim().startsWith('다음 질문') &&
+    !(await page.$eval('[data-step-main="q2"]', el => el.classList.contains('step-cta__main--quiet'))));
+  // 다음 버튼을 누르기 전에는 자유롭게 바꿀 수 있음 (하나만 선택)
+  await page.click('[data-choice-option="suffering"]');
+  await page.click('[data-choice-option="many_names"]');
+  await page.waitForTimeout(400);
+  check('다음을 누르기 전 선택 바꾸기: 마지막에 고른 하나만 선택됨, 여전히 질문 1/3', /질문 1\/3/.test(await page.$eval('#choiceStep', el => el.textContent)) &&
+    JSON.stringify(await page.$$eval('#choiceStep [aria-checked="true"]', els => els.map(e => e.dataset.choiceOption))) === '["many_names"]');
+  check('질문·선택지·다음 버튼이 한 화면에 (고른 뒤에도)', await inViewport(page, '#choicePrompt') && await inViewport(page, `[data-choice-option="${q1[3]}"]`) && await inViewport(page, '[data-step-main="q2"]'));
+  await tap('[data-step-main="q2"]');                               // 다음 질문
+  await page.waitForTimeout(300);
+  check('"다음 질문"을 눌러야 질문 2/3으로 이동 · 새 질문은 아무것도 선택되지 않음', /질문 2\/3/.test(await page.$eval('#choiceStep', el => el.textContent)) &&
+    (await page.$$eval('#choiceStep [aria-checked="true"]', els => els.length)) === 0 && /이 질문 건너뛰기/.test(await page.textContent('[data-step-main="q2"]')));
   await tap('[data-step-main="q2"]');                               // 2번은 고르지 않고 넘어감 (건너뛰기)
   await page.waitForTimeout(300);
-  check('질문 3/3 · 마지막 버튼 "이 질문 건너뛰고 소감 쓰기"', /질문 3\/3/.test(await page.$eval('#choiceStep', el => el.textContent)) &&
+  check('질문 3/3 · 고르기 전 마지막 버튼 "이 질문 건너뛰고 소감 쓰기"', /질문 3\/3/.test(await page.$eval('#choiceStep', el => el.textContent)) &&
     /이 질문 건너뛰고 소감 쓰기/.test(await page.textContent('[data-step-main="q2"]')));
+  check('마지막 질문 안내는 "한 줄 소감 쓰러 가기"', /‘한 줄 소감 쓰러 가기’를 눌러/.test(await page.$eval('#choiceStep', el => el.textContent)));
+  await tap('[data-choice-option="side_by_side"]');
+  await page.waitForTimeout(600);
+  check('마지막 질문에서 고르면 버튼이 "한 줄 소감 쓰러 가기" · 자동으로 넘어가지 않음', (await step(page)) === 'quick:2' &&
+    (await page.textContent('[data-step-main="q2"]')).trim().startsWith('한 줄 소감 쓰러 가기'));
   await page.click('[data-step-back]');
   await page.click('[data-step-back]');
   check('이전 버튼으로 질문 1로 돌아가도 고른 답 유지 · 버튼 "다음 질문"', /질문 1\/3/.test(await page.$eval('#choiceStep', el => el.textContent)) &&
@@ -92,9 +112,9 @@ run('quick-experience', async ({ browser, base, check, mockPage }) => {
     (await page.textContent('[data-step-main="q2"]')).trim().startsWith('다음 질문'));
   await page.click('[data-step-main="q2"]');
   await page.click('[data-step-main="q2"]');
+  check('다시 질문 3: 고른 답 유지', await page.$eval('[data-choice-option="side_by_side"]', el => el.getAttribute('aria-checked') === 'true'));
   check('관점 고르기 화면 가로 넘침 없음', await noHScroll(page));
-  await page.waitForTimeout(400);
-  await tap('[data-choice-option="side_by_side"]');                  // 마지막 질문을 고르면 바로 한 줄 소감으로
+  await tap('[data-step-main="q2"]');                               // 한 줄 소감 쓰러 가기
   await page.waitForFunction(() => document.querySelector('.page--detail').dataset.step === '3');
   await page.waitForTimeout(300);
 
@@ -111,7 +131,7 @@ run('quick-experience', async ({ browser, base, check, mockPage }) => {
   check('한 글자라도 쓰면 "My Memory Card 만들기"', /My Memory Card 만들기/.test(typedLabel));
   await tap('[data-step-main="q3"]');
   await page.waitForSelector('.page--card.active');
-  check(`첫 화면부터 카드까지 탭 ${taps}번 (사용법 설명 없이 · 6번 이하)`, taps <= 6, String(taps));
+  check(`첫 화면부터 카드까지 탭 ${taps}번 (사용법 설명 없이 · 8번 이하: 고르기와 다음을 따로 누름)`, taps <= 8, String(taps));
 
   /* ---------- 4. 카드: 고른 관점(객관식)과 직접 쓴 소감 구분 ---------- */
   await page.waitForTimeout(500);
@@ -200,18 +220,13 @@ run('quick-experience', async ({ browser, base, check, mockPage }) => {
   const zq = await page.$eval('#choicePrompt', el => el.textContent);
   check('재일조선인 질문 1', /가장 먼저 다뤄야/.test(zq), zq);
   await page.evaluate(() => { window.__mockDb.noChoiceTable = true; });
-  await page.dblclick('[data-choice-option="legal_status"]');          // 두 번 빨리 눌러도 한 질문만 넘어감
-  await page.waitForTimeout(700);
-  check('선택지를 두 번 눌러도 질문 2/3 (다음 질문을 건너뛰지 않음)', /질문 2\/3/.test(await page.$eval('#choiceStep', el => el.textContent)));
-  await page.waitForTimeout(400);
-  await page.click('[data-step-back]');
-  await page.click('[data-choice-option="legal_status"]');
-  await page.waitForFunction(() => /질문 2\/3/.test(document.getElementById('choiceStep').textContent));
-  await page.click('#choiceStep [data-choice-option]');               // 넘어가자마자 다시 누른 손가락
-  await page.waitForTimeout(500);
-  check('새 질문이 뜬 직후의 터치는 무시 (질문 2는 고르지 않은 채)', /질문 2\/3/.test(await page.$eval('#choiceStep', el => el.textContent)) &&
-    (await page.$$eval('#choiceStep [aria-checked="true"]', els => els.length)) === 0);
-  for (let i = 0; i < 2; i++) await page.click('[data-step-main="q2"]');
+  await page.dblclick('[data-choice-option="legal_status"]');          // 두 번 빨리 눌러도 선택만 유지, 넘어가지 않음
+  await page.waitForTimeout(600);
+  check('작은 화면에서 선택지를 두 번 눌러도 질문 1/3 그대로 · 선택 유지', /질문 1\/3/.test(await page.$eval('#choiceStep', el => el.textContent)) &&
+    await page.$eval('[data-choice-option="legal_status"]', el => el.getAttribute('aria-checked') === 'true'));
+  check('작은 화면(360×740)에서도 고른 뒤 "다음 질문" 버튼이 보임', await inViewport(page, '[data-step-main="q2"]') &&
+    (await page.textContent('[data-step-main="q2"]')).trim().startsWith('다음 질문'));
+  for (let i = 0; i < 3; i++) await page.click('[data-step-main="q2"]');   // 다음 → 건너뛰기 → 건너뛰고 소감
   await page.check('#choiceShareConsent');
   await page.click('[data-step-main="q3"]');
   await page.waitForSelector('.page--card.active');
@@ -240,6 +255,20 @@ run('quick-experience', async ({ browser, base, check, mockPage }) => {
   await page.waitForSelector('.page--detail.active');
   check('사건 목록에서 고른 임진왜란은 심화 탐구 STEP 1 (기존 흐름)', (await step(page)) === 'deep:1' && await page.isVisible('#beforeInput'));
   check('심화 탐구에서도 기본 체험으로 갈 수 있음', await page.isVisible('[data-quick-return]'));
+  // PC(마우스): 관점 고르기도 고른 뒤 '다음 질문'을 눌러야 넘어감
+  await page.click('[data-quick-return]');
+  await page.waitForTimeout(300);
+  if ((await step(page)) === 'quick:1') await page.click('[data-step-main="q1"]');
+  await page.waitForSelector('#choiceStep [data-choice-option]');
+  const deskFirst = (await options(page))[2];
+  await page.click(`[data-choice-option="${deskFirst}"]`);
+  await page.waitForTimeout(800);
+  check('PC: 선택지를 클릭하면 체크만, 질문 1/3 그대로 · 버튼 "다음 질문"', /질문 1\/3/.test(await page.$eval('#choiceStep', el => el.textContent)) &&
+    await page.$eval(`[data-choice-option="${deskFirst}"]`, el => el.getAttribute('aria-checked') === 'true') &&
+    (await page.textContent('[data-step-main="q2"]')).trim().startsWith('다음 질문') && await inViewport(page, '[data-step-main="q2"]'));
+  await page.click('[data-step-main="q2"]');
+  await page.waitForTimeout(300);
+  check('PC: "다음 질문"을 클릭하면 질문 2/3', /질문 2\/3/.test(await page.$eval('#choiceStep', el => el.textContent)));
   check('데스크톱에서 페이지 오류 없음', page.__errors.length === 0, page.__errors.join(' | '));
   await desk.close();
 });
