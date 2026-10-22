@@ -270,6 +270,12 @@ test('index.html: 첫 화면에 두 사건 큰 카드, 객관식·소감 단계,
   assert.doesNotMatch(html, /data-reflect-skip/);                      // 소감 건너뛰기는 카드 버튼 하나로 (중복 버튼 없음)
   assert.match(html, /id="choiceShareConsent"/);
   assert.doesNotMatch(html, /id="choiceShareConsent"[^>]*checked/);      // 기본은 보내지 않음
+  // 소감 입력이 먼저, 객관식 통계 동의는 그 아래 접힌 '추가 선택'에 따로 (소감 작성의 필수 동의로 보이지 않게)
+  const extra = html.slice(html.indexOf('<details class="more-box reflect-extra"'), html.indexOf('</details>', html.indexOf('id="reflectExtra"')));
+  assert.ok(html.indexOf('id="reflectInput"') < html.indexOf('id="reflectExtra"'));
+  assert.match(extra, /id="choiceShareConsent"/);
+  assert.doesNotMatch(extra, /\sopen[\s>]/);                            // 기본은 접혀 있음
+  assert.match(html, /<label class="reflect-label" for="reflectInput">내 카드에 남길 소감<\/label>/);
   const srcs = [...html.matchAll(/<script[^>]*\ssrc="([^"]+)"/g)].map(m => m[1]);
   assert.ok(srcs.indexOf('./choice-questions.js') >= 0 && srcs.indexOf('./choice-questions.js') < srcs.indexOf('./script.js'));
 });
