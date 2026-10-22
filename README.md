@@ -7,6 +7,8 @@
 모인 제안을 다시 분석해 **공동 기억이 형성되는 과정**을 데이터로 보여주는 디지털 인문학 웹 플랫폼입니다.
 서버 없이 GitHub Pages에서 동작하며, 참여 데이터는 Supabase에 저장됩니다.
 
+> 본선 시연 준비·당일 점검: [docs/finals-demo-checklist.md](docs/finals-demo-checklist.md)
+
 ---
 
 ## 1. 프로젝트 목적과 문제의식
