@@ -29,6 +29,17 @@ run('quick-experience', async ({ browser, base, check, mockPage }) => {
   check('사건 카드 터치 높이 48px 이상', pickH.every(h => h >= 48), JSON.stringify(pickH));
   check('첫 화면에 "3–5분 · 익명 · 로그인 없음 · 정답 없음"', /3–5분[\s\S]*익명[\s\S]*로그인 없음[\s\S]*정답 없음/.test(await page.$eval('.hero__meta', el => el.innerText)));
   check('모바일 첫 화면 가로 넘침 없음', await noHScroll(page));
+  check('사건 카드 위에 "어떤 역사부터 볼까요?" · 임진왜란에 "처음이라면 여기부터"', await page.isVisible('#quickPicksLabel') &&
+    /처음이라면 여기부터/.test(await page.textContent('[data-quick-event="imjin"]')) && !(await page.textContent('[data-quick-event="zainichi"]')).includes('처음이라면'));
+  // 상단 "참여하기"는 기본 체험 사건 카드로 (사건 목록·연령대가 아님)
+  await page.evaluate(() => navigateTo('archive'));
+  await page.click('.nav__menu a[data-view="participate"]');
+  await page.waitForSelector('.page--home.active');
+  await page.waitForTimeout(700);
+  check('상단 "참여하기" → 첫 화면 사건 카드, 첫 카드에 초점 (연령대·사건 목록 아님)',
+    await inViewport(page, '[data-quick-event="imjin"]') && await page.evaluate(() => document.activeElement && document.activeElement.dataset.quickEvent === 'imjin') &&
+    !(await page.isVisible('#agePicker')) && !(await page.isVisible('.page--events.active')));
+  await page.evaluate(() => window.scrollTo(0, 0));
 
   await tap('[data-quick-event="imjin"]');
   await page.waitForSelector('.page--detail.active');
