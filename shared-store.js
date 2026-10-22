@@ -74,6 +74,9 @@
     if (!error) return '';
     const msg = String(error.message || error);
     if (isTimeoutError(error)) return '서버 응답이 늦어 요청을 멈췄습니다. 잠시 후 다시 시도해 주세요.';
+    // 서버 등록 빈도 제한 (supabase/2026-10-server-moderation.sql 의 sm_insert_guard)
+    if (/sm_duplicate/.test(msg)) return '같은 제안이 방금 등록되었습니다. 아래 목록에서 확인해 주세요.';
+    if (/sm_rate_limited/.test(msg)) return '지금 등록이 몰려 잠시 멈췄습니다. 1분쯤 뒤에 다시 등록해 주세요.';
     if (/fetch|network|failed to fetch|load failed/i.test(msg)) return '네트워크에 연결할 수 없습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.';
     if (/row-level security|permission|not allowed|violates/i.test(msg)) return '저장 권한이 없거나 입력값이 허용 범위를 벗어났습니다.';
     return msg;

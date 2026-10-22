@@ -460,6 +460,17 @@ npm test                                            # 기록 형식 확인 (질�
 
 **Security Advisor**: 하드닝 전 6건(anon 3 + authenticated 3) → 하드닝 후 4건. 남은 4건은 `anon_security_definer_function_executable`(위 4개 함수)이며 **의도된 구성**입니다. 이 함수들은 조회 정책이 없는 비공개 테이블(참여자 키·공감 키)을 읽어 집계값 또는 가려진 행만 돌려주기 위해 DEFINER가 필요합니다. INVOKER로 바꾸면 집계가 0이 되거나 비공개 키를 공개해야 합니다. 반환값에는 키·개인 식별 정보가 없고, 입력값은 SQL 파라미터로만 비교합니다.
 
+### 서버 단 숨김 · 등록 빈도 제한 — [`supabase/2026-10-server-moderation.sql`](supabase/2026-10-server-moderation.sql)
+
+| 대상 | 내용 |
+|---|---|
+| `shared_expressions.is_hidden` | boolean, 기본 false. 운영자가 true로 바꾸면 **재배포 없이 즉시** 테이블 직접 조회(RLS)·`public_expressions`·공감 수·참여자 수·연령대 집계에서 모두 빠집니다. 행은 지우지 않습니다. anon은 등록·수정 권한이 없어 지정할 수 없습니다 |
+| 숨기는 방법 | Table Editor → `shared_expressions` → `is_hidden` = true, 또는 `update public.shared_expressions set is_hidden = true where id = …;` |
+| `sm_insert_guard` 트리거 | ① 같은 사건에 **모든 항목이 같은 제안**이 5분 안에 다시 오면 `sm_duplicate`(응답 시간 초과 뒤 다시 누름·도배) ② 전체 등록이 1분에 120건 이상이면 `sm_rate_limited`. 같은 문장 틀을 쓴 다른 학생은 닉네임·이유·탐구 전 문장·연령대 등까지 모두 같아야 걸리므로 거의 막히지 않습니다. 사이트는 두 오류를 안내 문구로 보여 주고 쓰던 문장을 남깁니다 |
+| 운영 반영 전 리허설 | 운영 DB에서 트랜잭션 안에 적용 → anon 권한으로 확인 → 강제 롤백 (2026-10-22). 숨긴 행 직접 조회·RPC 모두 제외, 참여자 수 재계산, 등록+`select('id')`·참여자 연결 정상, 동일 제안 차단·같은 문장 다른 학생 허용, anon의 is_hidden 지정·수정 거부, 1분 120건에서 차단 |
+
+공감(`expression_empathy`) 빈도 제한은 넣지 않았습니다(브라우저 키 기준 중복 방지만). `HIDDEN_EXPRESSION_IDS`(코드 숨김)는 SQL 적용 전·후 모두 그대로 동작합니다.
+
 ### RLS와 보안
 
 - 브라우저에는 **publishable(anon) 키만** 있습니다. `service_role` 키·비밀 키를 절대 코드에 넣지 마세요.
@@ -467,7 +478,7 @@ npm test                                            # 기록 형식 확인 (질�
 - `shared_expressions`: 조회·등록만 허용, 수정·삭제 정책·권한 없음. 등록은 허용 컬럼·CHECK 제약 범위 안에서만.
 - `expression_empathy`: 등록만 허용, 조회 정책 없음. 집계는 함수로만.
 - 공감 중복 방지는 브라우저별 무작위 키 기준입니다. 저장소를 지우거나 다른 브라우저를 쓰면 다시 공감할 수 있습니다. 더 강하게 막으려면 Supabase 익명 로그인(Anonymous Sign-in) + `auth.uid()` 기준 UNIQUE를 권장합니다.
-- **현재 DB 단 요청 빈도 제한은 없습니다**(수업 전 확인 권장).
+- 등록 빈도 제한: `2026-10-server-moderation.sql` 적용 후 같은 제안 5분 내 재등록·전체 1분 120건 이상 차단. 공감 빈도 제한은 없습니다.
 
 ### Shared Archive와 부적절 게시물 관리 방침
 
