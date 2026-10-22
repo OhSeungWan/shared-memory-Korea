@@ -65,10 +65,10 @@ const fourthNarratorData = {
       { id: 'imjin-waeran', label: '임진왜란', forms: ['임진왜란', '壬辰倭乱', '壬辰倭亂'] },
       { id: 'imjin-war', label: '임진전쟁', forms: ['임진전쟁', '壬辰戦争', '壬辰战争', 'Imjin War'] },
       { id: 'jeongyu', label: '정유재란', forms: ['정유재란', '丁酉再乱', '丁酉再亂'] },
-      { id: 'bunroku-keicho', label: '文禄・慶長の役', forms: ['文禄・慶長の役', '文禄の役', '慶長の役', '文禄·慶長', '분로쿠·게이초'] },
+      { id: 'bunroku-keicho', label: '文禄・慶長の役', forms: ['文禄・慶長の役', '文禄の役', '慶長の役', '文禄·慶長', '文禄·庆长', '文禄・庆长', '분로쿠·게이초'] },
       { id: 'chosen-shuppei', label: '朝鮮出兵', forms: ['朝鮮出兵', '조선 출병'] },
       { id: 'chosen-shinryaku', label: '朝鮮侵略', forms: ['朝鮮侵略'] },
-      { id: 'wanli-war', label: '万历朝鲜战争', forms: ['万历朝鲜战争', '萬曆朝鮮戰爭', '만력조선전쟁'] },
+      { id: 'wanli-war', label: '万历朝鲜战争', forms: ['万历朝鲜', '萬曆朝鮮', '万暦朝鮮', '만력조선'] },
       { id: 'kangwo-yuanchao', label: '抗倭援朝', forms: ['抗倭援朝', '항왜원조'] }
     ],
     zainichi: [
@@ -84,7 +84,7 @@ const fourthNarratorData = {
   focus: {
     imjin: [
       { id: 'hideyoshi', label: '도요토미 히데요시', forms: ['히데요시', '秀吉', 'Hideyoshi'] },
-      { id: 'ming', label: '명나라의 참전', forms: ['명나라', '명군', '明朝', '明軍', '明军', '明国', '明國', '大明', 'Ming'] },
+      { id: 'ming', label: '명나라의 참전', forms: ['명나라', '명군', '明朝', '明軍', '明军', '明国', '明國', '大明', '明の', 'Ming'] },
       { id: 'yi-sun-sin', label: '이순신', forms: ['이순신', '李舜臣', 'Yi Sun'] }
     ],
     zainichi: [
@@ -104,7 +104,7 @@ const fourthNarratorData = {
       { id: 'annexation', label: '한국 병합', forms: ['강제 병합', '한일 병합', '한국 병합', '韓国併合', '日韓併合', '日韩合并', '日韓合併', '吞并', '吞併', 'annex'] }
     ],
     hiroshima: [
-      { id: 'korean-victims', label: '조선인 피해자', forms: ['조선인', '한국인', '朝鮮人', '韓国人', '朝鲜人', '韩国人', '韓國人', '朝鮮半島出身', 'Korean'] },
+      { id: 'korean-victims', label: '조선인 피해자', forms: ['조선인', '한국인', '朝鮮人', '韓国人', '朝鲜人', '韩国人', '韓國人', '朝鮮半島', '朝鲜半岛', 'Korean'] },
       { id: 'us-agent', label: '투하한 나라(미국)', forms: ['미국', '미군', 'アメリカ', '米国', '米軍', '美国', '美國', '美军', '美軍', 'United States', 'American'] }
     ]
   },
