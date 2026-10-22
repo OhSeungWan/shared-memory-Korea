@@ -3341,10 +3341,28 @@ mark.hl--distinct {
   border: 1.5px solid var(--ink); font-size: var(--fs-xs); font-weight: 700; letter-spacing: var(--ls-wide);
 }
 .fourth-card__title { font-weight: 700; font-size: var(--fs-md); }
-.fourth-card__answer { white-space: pre-wrap; font-size: var(--fs-md); line-height: var(--lh-loose); margin: 0.4rem 0 0.8rem; }
+.fourth-card__answer { font-size: var(--fs-md); line-height: var(--lh-loose); margin: 0.4rem 0 0.8rem; overflow-wrap: anywhere; }
+/* AI 답변 Markdown 표시 (script.js renderAnswerHtml) — 원문은 그대로, 화면에서만 문단·목록·굵게 */
+.md p { margin: 0 0 0.6rem; }
+.md p:last-child { margin-bottom: 0; }
+.md .md-h { font-weight: 700; color: var(--ink); margin-top: 0.8rem; }
+.md .md-h:first-child { margin-top: 0; }
+.md ul, .md ol { margin: 0 0 0.6rem 1.2rem; padding: 0; }
+.md li { margin-bottom: 0.25rem; }
+.md strong { font-weight: 700; color: var(--ink); }
+.fourth-intro { border-left: 3px solid var(--accent); background: var(--bg-soft); border-radius: var(--radius); padding: 0.8rem 1rem; margin-bottom: 1rem; font-size: var(--fs-sm); line-height: var(--lh-body); }
+.fourth-intro p { margin: 0 0 0.4rem; }
+.fourth-intro p:last-child { margin-bottom: 0; }
+.fourth-intro__count strong { color: var(--accent); }
+/* 언어 선택: 좁은 화면에서만 한 언어 카드씩 (넓은 화면은 세 카드를 나란히 비교) */
+.fourth-langs { display: none; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.8rem; }
+@media (max-width: 720px) {
+  .fourth-langs { display: flex; }
+  .fourth-card:not(.is-shown) { display: none; }
+}
 .fourth-card__translation { font-size: var(--fs-sm); color: var(--ink-soft); margin-bottom: 0.8rem; }
 .fourth-card__translation > summary { cursor: pointer; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
-.fourth-card__translation p { white-space: pre-wrap; line-height: var(--lh-body); margin-top: 0.4rem; }
+.fourth-card__translation .md { line-height: var(--lh-body); margin-top: 0.4rem; }
 .fourth-card__meta { margin-top: 0.8rem; padding-top: 0.6rem; border-top: 1px dashed var(--line); font-size: var(--fs-xs); color: var(--ink-mute); }
 .fourth-runs { display: flex; gap: 0.35rem; margin-bottom: 0.4rem; }
 .fourth-runs__btn {

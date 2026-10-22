@@ -17,7 +17,9 @@ const aiNarrativesData = {
   records: [1, 2, 3].map(run => ({
     eventId: 'hiroshima', lang: 'ja', run,
     prompt: fourthNarratorData.questions.hiroshima.ja,
-    answer: 'FAKE_テスト回答' + run + (run === 1 ? ' 朝鮮人も被害を受けた。<b>太字</b>' : ' 多くの市民が被害を受けた。'),
+    answer: 'FAKE_テスト回答' + run + (run === 1
+      ? ' 朝鮮人も被害を受けた。<b>太字</b>\\n\\n## 見出し\\n- **強調<img src=x onerror="window.__xss=1">**\\n- 二つ目'
+      : ' 多くの市民が被害を受けた。'),
     translationKo: 'FAKE_참고 번역 ' + run,
     model: 'test-model', collectedAt: '2026-10-22T00:00:00Z', params: {}
   })).concat([{
@@ -77,6 +79,12 @@ run('fourth-narrator', async ({ browser, base, check, mockPage, presetContinue }
   check('회차 버튼 3개', (await page2.$$eval('#fourthNarrator [data-ai-run]', els => els.length)) === 3);
   const answer1 = await page2.$eval('#fourthNarrator .fourth-card__answer', el => el.innerHTML);
   check('답변은 HTML로 해석하지 않음', answer1.includes('&lt;b&gt;') && !(await page2.$('#fourthNarrator .fourth-card__answer b')), answer1);
+  check('Markdown 굵게·목록·제목 안의 HTML도 글자로만 표시', !(await page2.$('#fourthNarrator img')) && answer1.includes('&lt;img') &&
+    !(await page2.evaluate(() => window.__xss)), answer1);
+  const md = await page2.$eval('#fourthNarrator .fourth-card__answer', el => ({
+    text: el.textContent, h: el.querySelectorAll('.md-h').length, li: el.querySelectorAll('ul > li').length, strong: el.querySelectorAll('li strong').length
+  }));
+  check('Markdown 기호 대신 제목·목록·굵게로 표시 (##·** 기호 없음)', md.h === 1 && md.li === 2 && md.strong === 1 && !/##|\*\*/.test(md.text), JSON.stringify(md));
   await page2.click('#fourthNarrator [data-ai-run="2"]');
   check('회차를 바꾸면 그 답변 표시', /FAKE_テスト回答2/.test(await page2.textContent('#fourthNarrator .fourth-card__answer')));
   check('바꾼 회차 버튼이 눌린 상태', await page2.$eval('#fourthNarrator [data-ai-run="2"]', el => el.getAttribute('aria-pressed')) === 'true');
@@ -104,6 +112,12 @@ run('fourth-narrator', async ({ browser, base, check, mockPage, presetContinue }
   check('실제 기록: 일본어·중국어 카드에만 참고 번역', (await page4.$$eval('#fourthNarrator .fourth-card__translation', els => els.length)) === 2);
   check('실제 기록: 모델 표시', /claude-opus-5-5/.test(await page4.textContent('#fourthNarrator .fourth-card__meta')));
   check('실제 기록: "기록 전" 안내 없음', !/아직 기록 전/.test(await page4.textContent('#fourthNarrator')));
+  const realMd = await page4.$$eval('#fourthNarrator .fourth-card__answer, #fourthNarrator .fourth-card__translation .md', els => els.map(e => e.textContent));
+  check('실제 기록: 답변·번역에 Markdown 기호(##, **)가 그대로 보이지 않음', realMd.length === 5 && realMd.every(t => !/^#{1,6}\s|\*\*/m.test(t)), realMd.filter(t => /\*\*|^#/m.test(t)).length + '건');
+  const firstNames = await page4.$$eval('#fourthNarrator .fourth-card', els => els.map(e => e.querySelector('.narrative-card__keywords').textContent.replace(/\s+/g, ' ').trim()));
+  check('실제 기록: 가장 먼저 쓴 이름 (한 임진왜란 · 일 文禄・慶長の役 · 중 万历朝鲜之役)', /임진왜란 3회 중 3회/.test(firstNames[0]) && /文禄・慶長の役 3회 중 3회/.test(firstNames[1]) && /万历朝鲜之役·战争.*3회 중 3회/.test(firstNames[2]), firstNames.join(' | '));
+  check('실제 기록: 편집자 관찰 표시', (await page4.$$eval('#fourthNarrator .fourth-observe li', els => els.length)) >= 2);
+  check('실제 기록: 핵심 빈자리 강조 (중국어 민간·백성, 일본어 국제·동아시아)', (await page4.$$eval('#memoryGaps .gap-summary__item--key', els => els.length)) === 2);
   const realHeads = await page4.$$eval('#memoryGaps thead th', els => els.map(e => e.textContent.trim()));
   check('실제 기록: 빈자리 표에 AI 세 언어 열', realHeads.join('|') === '요소|한국 측|일본 측|중국 측|AI · 한국어|AI · 일본어|AI · 중국어', realHeads.join('|'));
   const cellOf = (pg, label, col) => pg.$$eval('#memoryGaps tbody tr', (rows, [label, col]) => {
@@ -128,6 +142,13 @@ run('fourth-narrator', async ({ browser, base, check, mockPage, presetContinue }
   const page3 = await openFourth(ctx3, 'imjin');
   await page3.click('.tab[data-tab="fourth"]');
   check('모바일에서 빈자리 표 표시', await page3.isVisible('#memoryGaps .gap-table'));
+  const shownCards = () => page3.$$eval('#fourthNarrator .fourth-card', els => els.filter(e => e.offsetParent !== null).map(e => e.dataset.aiCard));
+  check('모바일: 언어 카드는 하나씩 (처음엔 한국어)', (await shownCards()).join(',') === 'ko', (await shownCards()).join(','));
+  await page3.click('#fourthNarrator [data-ai-show="zh"]');
+  check('모바일: 언어 버튼으로 중국어 카드로 바꿈', (await shownCards()).join(',') === 'zh' && await page3.isVisible('#fourthNarrator [data-ai-card="zh"] .fourth-card__translation'));
+  await page3.click('#fourthNarrator [data-ai-card="zh"] [data-ai-run="3"]');
+  check('모바일: 회차를 바꿔도 고른 언어 유지', (await shownCards()).join(',') === 'zh' &&
+    await page3.$eval('#fourthNarrator [data-ai-card="zh"] [data-ai-run="3"]', el => el.getAttribute('aria-pressed')) === 'true');
   const overflow = await page3.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   check('모바일 폭에서 가로 넘침 없음 (표는 상자 안에서만 스크롤)', overflow <= 1, `넘침 ${overflow}px`);
   check('페이지 오류 없음 (모바일)', page3.__errors.length === 0, page3.__errors.join(' / '));
