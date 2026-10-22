@@ -124,14 +124,11 @@
             <li class="hero-names__item hero-names__item--china"><small>중국</small><span lang="zh-Hans">万历朝鲜战争</span></li>
             <li class="hero-names__item hero-names__item--ai"><small>AI</small><span>?</span></li>
           </ul>
-          <p class="hero__subtitle">
-            <strong>사건 하나를 누르면 바로 시작해요.</strong> 세 나라의 기록을 읽고, 내가 중요하다고 생각하는 관점을 고르면
-            <strong>My Memory Card</strong>를 받아 갑니다.
-          </p>
-
           <!-- 기본 체험: 큰 사건 카드를 누르면 연령대·긴 설명 없이 바로 STEP 1(세 나라 비교)이 열립니다 -->
-          <div class="quick-picks" role="group" aria-label="바로 시작할 역사 고르기">
+          <p class="quick-picks__label" id="quickPicksLabel"><strong>어떤 역사부터 볼까요?</strong> 하나를 누르면 바로 시작해요</p>
+          <div class="quick-picks" id="quickPicks" role="group" aria-labelledby="quickPicksLabel">
             <button type="button" class="quick-pick quick-pick--imjin" data-quick-event="imjin">
+              <span class="quick-pick__badge">처음이라면 여기부터</span>
               <span class="quick-pick__seal" aria-hidden="true">壬</span>
               <span class="quick-pick__body">
                 <span class="quick-pick__era">1592 – 1598</span>

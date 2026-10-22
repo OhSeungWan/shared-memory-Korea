@@ -147,7 +147,7 @@ function openEventDetail(eventId, opts) {
   const event = eventsData.find(e => e.id === eventId);
   if (!event) return;
   // 이전 참여 기록이 있는데 이 창에서 아직 "누가 참여하는지" 고르지 않았다면 먼저 묻습니다.
-  if (!ensureParticipantChoice(() => openEventDetail(eventId, opts), 'event')) return;
+  if (!ensureParticipantChoice(() => openEventDetail(eventId, opts), opts && opts.quick ? 'quick' : 'event')) return;
 
   currentEventId = eventId;
   // 서술 NLP 결과는 형광펜·공통점/차이점 카드·작성 가이드·사료 연결·공동 기억 지도에서 쓰므로 먼저 한 번 계산합니다.
@@ -4282,7 +4282,22 @@ function gotoEvents(mode) {
   navigateTo('events');
 }
 
-/* "참여하기": 연령대를 아직 고르지 않았다면 첫 화면의 참여 시작 영역을 먼저 엽니다. */
+/* 상단 "지금 참여하기": 첫 화면의 기본 체험 사건 카드로 가서 첫 카드에 초점을 둡니다(바로 누를 수 있게). */
+function gotoQuickPicks() {
+  const picks = document.getElementById('quickPicks');
+  if (!picks) { startExploration(); return; }
+  const fromOtherPage = !document.querySelector('.page--home.active');
+  if (fromOtherPage) navigateTo('home');
+  setTimeout(() => {
+    picks.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    picks.querySelector('[data-quick-event]')?.focus({ preventScroll: true });
+    picks.classList.remove('quick-picks--flash');
+    void picks.offsetWidth;            // 같은 화면에서 다시 눌러도 깜빡임이 다시 보이게
+    picks.classList.add('quick-picks--flash');
+  }, fromOtherPage ? 300 : 0);
+}
+
+/* "다른 사건 · 전체 탐구": 연령대를 아직 고르지 않았다면 첫 화면의 참여 시작 영역을 먼저 엽니다. */
 function startExploration() {
   if (!ensureParticipantChoice(() => startExploration(), 'start')) return;
   const picker = document.getElementById('agePicker');
@@ -4406,7 +4421,12 @@ function resetParticipantUiState(options) {
   }
 }
 
-function startAsNewParticipant() {
+/**
+ * @param {Function} [next]  초기화한 뒤 이어서 할 일. 없으면 기본 체험 중이었으면 첫 화면 사건 카드로,
+ *   심화 탐구 중이었으면 연령대 선택(전체 탐구)부터 다시 시작합니다.
+ */
+function startAsNewParticipant(next) {
+  const wasQuick = exploreMode === 'quick' || cardState.mode === 'quick';
   if (!Store) return false;
   const pending = draftInProgress();
   if (pending.length) {
@@ -4427,7 +4447,9 @@ function startAsNewParticipant() {
     status.hidden = false;
   }
   navigateTo('home');
-  startExploration();   // 연령대가 지워졌으므로 연령대 선택부터 다시 시작합니다.
+  if (typeof next === 'function') next();
+  else if (wasQuick) gotoQuickPicks();
+  else startExploration();   // 연령대가 지워졌으므로 연령대 선택부터 다시 시작합니다.
   return true;
 }
 
@@ -4534,7 +4556,8 @@ function handleGateChoice(choice) {
     document.getElementById('formAgeLabel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
-  startAsNewParticipant();    // 작성 중인 내용이 있으면 확인 창을 띄우고, 취소하면 선택 창이 그대로 남습니다.
+  // 기본 체험(사건 카드·QR)에서 물었다면, 초기화한 뒤 누르던 사건을 그대로 엽니다(연령대 묻지 않음).
+  startAsNewParticipant(context === 'quick' && action ? action : undefined);    // 작성 중인 내용이 있으면 확인 창을 띄우고, 취소하면 선택 창이 그대로 남습니다.
 }
 
 /** 이 기기에 이전 참여 기록이 있을 때만 "새 참여자로 시작" 안내를 보여줍니다 (처음 온 사람에게는 숨김). */
@@ -4654,8 +4677,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-page]').forEach(el => {
     el.addEventListener('click', e => {
       e.preventDefault();
-      // 상단 메뉴: "지금 참여하기"는 참여 시작 영역부터, "Shared Memory 보기"는 결과 보기용 사건 선택으로
-      if (el.dataset.view === 'participate') { startExploration(); return; }
+      // 상단 메뉴: "지금 참여하기"는 첫 화면의 기본 체험 사건 카드로, "Shared Memory 보기"는 결과 보기용 사건 선택으로
+      // (다른 사건·심화 탐구는 첫 화면의 '다른 사건 · 전체 탐구 둘러보기' → startExploration)
+      if (el.dataset.view === 'participate') { gotoQuickPicks(); return; }
       if (el.dataset.view === 'memory') { gotoEvents('memory'); return; }
       if (el.dataset.page === 'archive') { openArchive(); return; }
       navigateTo(el.dataset.page);
