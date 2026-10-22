@@ -30,7 +30,9 @@
        DB의 행은 그대로 두며, 영구 삭제는 운영자 승인 후 Supabase 대시보드에서 합니다.
      · ARCHIVE_SINCE: Shared Archive에는 공개 등록에 별도 동의를 받기 시작한 배포(2026-10-16) 이후의 제안만 모읍니다.
        그 전 시범 운영 제안은 아카이브에 넣지 않습니다. */
-  const HIDDEN_EXPRESSION_IDS = [];
+  const HIDDEN_EXPRESSION_IDS = [
+    11, 14   // 2026-10-08 시범 운영: 빈칸 검사 도입 전 문장 틀 밑줄(_, ____)이 남은 제안 (운영 책임자 확인 2026-10-22, DB 행 유지)
+  ];
   const ARCHIVE_SINCE = '2026-10-16T13:00:00Z';
 
   function isHidden(id) {
@@ -61,9 +63,20 @@
       /column .* (does not exist|not find)|could not find the .* (column|function|table)|schema cache/i.test(msg);
   }
 
+  /** supabase-config.js의 제한 시간 초과(TimeoutError) 또는 중단된 요청 */
+  function isTimeoutError(error) {
+    if (!error) return false;
+    const msg = String(error.name || '') + ' ' + String(error.message || error);
+    return /timeout|timed out|abort/i.test(msg);
+  }
+
   function friendlyError(error) {
     if (!error) return '';
     const msg = String(error.message || error);
+    if (isTimeoutError(error)) return '서버 응답이 늦어 요청을 멈췄습니다. 잠시 후 다시 시도해 주세요.';
+    // 서버 등록 빈도 제한 (supabase/2026-10-server-moderation.sql 의 sm_insert_guard)
+    if (/sm_duplicate/.test(msg)) return '같은 제안이 방금 등록되었습니다. 아래 목록에서 확인해 주세요.';
+    if (/sm_rate_limited/.test(msg)) return '지금 등록이 몰려 잠시 멈췄습니다. 1분쯤 뒤에 다시 등록해 주세요.';
     if (/fetch|network|failed to fetch|load failed/i.test(msg)) return '네트워크에 연결할 수 없습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.';
     if (/row-level security|permission|not allowed|violates/i.test(msg)) return '저장 권한이 없거나 입력값이 허용 범위를 벗어났습니다.';
     return msg;
@@ -126,13 +139,21 @@
           return { ok: true, legacy: level > 0, level, id };
         }
         if (!isMissingSchemaError(res.error) || level === attempts.length - 1) {
-          return { ok: false, error: friendlyError(res.error), raw: res.error };
+          return { ok: false, error: insertError(res.error), raw: res.error };
         }
       }
     } catch (e) {
-      return { ok: false, error: friendlyError(e), raw: e };
+      return { ok: false, error: insertError(e), raw: e };
     }
     return { ok: false, error: '저장하지 못했습니다.' };
+  }
+
+  /** 등록 실패 안내. 시간 초과는 서버에 이미 저장됐을 수 있으므로 다시 등록하기 전에 목록을 확인하게 합니다. */
+  function insertError(error) {
+    if (isTimeoutError(error)) {
+      return '서버 응답이 늦어 등록 여부를 확인하지 못했습니다. 잠시 후 아래 목록에 내 문장이 없으면 다시 등록해 주세요.';
+    }
+    return friendlyError(error);
   }
 
   /** 제안 id ↔ 익명 참여자 키 연결 (비공개 테이블, 조회 불가). 실패는 무시합니다. */
@@ -190,6 +211,8 @@
       if (typeof c.rpc === 'function') {
         const r = await c.rpc(LIST_RPC, { p_event_key: eventKey, p_limit: LOAD_LIMIT });
         if (!r.error && Array.isArray(r.data)) return done(r.data, 'rpc');
+        // 시간 초과면 테이블로 다시 묻지 않습니다(기다리는 시간이 두 배가 되므로).
+        if (isTimeoutError(r.error)) return { data: [], error: friendlyError(r.error) };
       }
       const table = cols => c.from(TABLE).select(cols)
         .eq('event_key', eventKey)

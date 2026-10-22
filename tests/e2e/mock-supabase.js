@@ -15,7 +15,7 @@
     memory = JSON.parse(JSON.stringify(db));
     try { sessionStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { /* 메모리에만 */ }
   }
-  window.__mockDb = { read: load, failInsert: false, calls: [] };
+  window.__mockDb = { read: load, failInsert: false, failLoad: false, calls: [] };
 
   function insert(table, rows) {
     const db = load();
@@ -53,6 +53,10 @@
     const db = load();
     window.__mockDb.calls.push({ op: 'rpc', name, args });
     const rows = db.shared_expressions.filter(r => !args || !args.p_event_key || r.event_key === args.p_event_key);
+    if (name === 'public_expressions' && window.__mockDb.failLoad) {
+      // supabase-config.js의 제한 시간이 지나 요청을 멈춘 경우와 같은 오류
+      return Promise.resolve({ data: null, error: { code: '', message: 'TimeoutError: request timeout' } });
+    }
     if (name === 'public_expressions') {
       return Promise.resolve({ data: rows.slice().reverse().map(r => Object.assign({ age_group_suppressed: false }, r)), error: null });
     }
