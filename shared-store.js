@@ -30,7 +30,9 @@
        DB의 행은 그대로 두며, 영구 삭제는 운영자 승인 후 Supabase 대시보드에서 합니다.
      · ARCHIVE_SINCE: Shared Archive에는 공개 등록에 별도 동의를 받기 시작한 배포(2026-10-16) 이후의 제안만 모읍니다.
        그 전 시범 운영 제안은 아카이브에 넣지 않습니다. */
-  const HIDDEN_EXPRESSION_IDS = [];
+  const HIDDEN_EXPRESSION_IDS = [
+    11, 14   // 2026-10-08 시범 운영: 빈칸 검사 도입 전 문장 틀 밑줄(_, ____)이 남은 제안 (운영 책임자 확인 2026-10-22, DB 행 유지)
+  ];
   const ARCHIVE_SINCE = '2026-10-16T13:00:00Z';
 
   function isHidden(id) {
