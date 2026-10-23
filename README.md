@@ -555,6 +555,19 @@ npm test                                            # 기록 형식 확인 (질�
 - 같은 사람이 객관식과 공동 표현을 모두 했다면 두 번 셀 수 있습니다(두 데이터를 잇지 않는 설계).
 - `completed_participants`·`expressions`는 공동 표현 기준 그대로입니다.
 
+### 참여자 수: 모든 참여를 셈 — [`supabase/2026-10-participation-pings.sql`](supabase/2026-10-participation-pings.sql)
+
+설문(기본 체험 객관식)을 마치거나(소감 단계 도착), My Memory Card를 만들거나, 공동 표현을 등록하면 사건마다 한 번 **(사건 이름, 무작위 참여자 키)** 두 칸만 `participation_pings`에 보냅니다. 통계 동의(객관식 답)와 공개 동의(공동 표현)와는 별개이며, 답·소감·문장·닉네임·연령대는 보내지 않습니다.
+
+| 대상 | 내용 |
+|---|---|
+| `participation_pings` 테이블 | `event_key` · `participant_key` · 서버가 정하는 `id`·`created_at`. `unique (participant_key, event_key)` |
+| 권한 | anon은 두 칸 **등록만**, 조회 정책 없음. 1분 600건 이상이면 멈춤(`sm_ping_insert_guard`) |
+| `participation_summary()` | 참여자 수 = (참여 기록 키 ∪ 숨기지 않은 공동 표현 키)의 수 + 키 없는 예전 공동 표현 + 참여 기록 시작 전 객관식 묶음. 같은 사람(키)은 사건·공동 표현을 여러 번 해도 1명 |
+
+- 키는 브라우저 저장소의 `sm_participant_key`입니다. ‘새 참여자로 시작’을 누르면 바뀌므로 공용 기기에서도 학생마다 따로 셉니다. 브라우저 저장소를 지우거나 다른 기기를 쓰면 같은 사람도 다시 셀 수 있습니다.
+- 사이트는 SQL 실행 전에도 그대로 동작합니다(기록만 보내지 못하고 다음에 다시 시도).
+
 ### RLS와 보안
 
 - 브라우저에는 **publishable(anon) 키만** 있습니다. `service_role` 키·비밀 키를 절대 코드에 넣지 마세요.

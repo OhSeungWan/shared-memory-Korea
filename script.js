@@ -2302,6 +2302,7 @@ async function submitSharedNarrative() {
 
   if (eventIdAtSubmit === currentEventId) {
     markFlow({ submitted: true, viewedResult: false });
+    countParticipation();
     const next = document.getElementById('submitNext');
     if (next) next.hidden = false;
     await loadSharedNarratives();
@@ -3379,6 +3380,8 @@ function gotoQuickStep(n) {
   if (!document.querySelector('.page--detail.active')) { navigateTo('detail'); setRouteHash(currentEventId); }
   if (n === 1 && activeTab !== 'compare') switchTab('compare');
   if (n === 3) choiceState.index = Math.max(0, quickQuestions().length - 1);
+  // 설문(객관식)에 하나라도 답하고 소감 단계에 오면 참여 1회로 셉니다 (답 내용은 보내지 않음).
+  if (n === 3 && chosenSummary().some(r => !r.skipped)) countParticipation();
   exploreStep = n;
   setCardStatus('');
   applyExploreStep();
@@ -3565,6 +3568,7 @@ function makeQuickCard(skipReflection) {
   cardState.options = Card.discoveryOptions(event, eventNlp);
   cardState.picked = cardState.picked.filter(id => cardState.options.some(o => o.id === id));
   markFlow({ cardMade: true });
+  countParticipation();
   const consent = document.getElementById('choiceShareConsent');
   const share = !!(consent && consent.checked && !consent.disabled);
   openCardPage();
@@ -3728,6 +3732,7 @@ function makeMemoryCard() {
   cardState.options = Card.discoveryOptions(event, eventNlp);
   cardState.picked = cardState.picked.filter(id => cardState.options.some(o => o.id === id));
   markFlow({ cardMade: true });
+  countParticipation();
   openCardPage();
 }
 
@@ -4456,6 +4461,16 @@ function renderEventsHeader() {
   set('eventsEyebrow', copy.eyebrow);
   set('eventsTitle', copy.title);
   set('eventsDesc', copy.desc);
+}
+
+/**
+ * 참여자 수 집계: 설문을 마치거나 카드를 만들거나 공동 표현을 등록하면 사건마다 한 번,
+ * 사건 이름과 이 브라우저의 무작위 참여자 키만 보냅니다 (답·소감·문장·닉네임·연령대는 보내지 않음).
+ * 같은 키는 서버에서 한 번만 세며, '새 참여자로 시작'을 누르면 키가 바뀌어 다음 학생이 따로 세어집니다.
+ */
+function countParticipation() {
+  if (!Store || !Store.recordParticipation || !currentEventId) return;
+  Store.recordParticipation(currentEventId).then(r => { if (r && r.ok && !r.already) loadParticipantCount(); }).catch(() => {});
 }
 
 /** 첫 화면의 참여자 수 — Supabase 집계 함수 결과만 사용합니다 (하드코딩 없음). */

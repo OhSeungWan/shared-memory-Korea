@@ -6,7 +6,7 @@
   'use strict';
   const KEY = '__mock_db';
   let memory = null;                      // sessionStorage를 쓸 수 없는 환경(테스트)용
-  const empty = () => ({ shared_expressions: [], expression_participants: [], expression_empathy: [], exploration_choices: [], nextId: 100 });
+  const empty = () => ({ shared_expressions: [], expression_participants: [], expression_empathy: [], exploration_choices: [], participation_pings: [], nextId: 100 });
   function load() {
     try { const v = sessionStorage.getItem(KEY); if (v) return JSON.parse(v); } catch (e) { /* 메모리 사용 */ }
     return memory ? JSON.parse(JSON.stringify(memory)) : empty();
@@ -24,13 +24,16 @@
     if (window.__mockDb.noChoiceTable && table === 'exploration_choices') {
       // 객관식 SQL을 아직 실행하지 않은 운영 DB와 같은 응답
       result = { data: null, error: { code: 'PGRST205', message: "Could not find the table 'public.exploration_choices' in the schema cache" } };
+    } else if (table === 'participation_pings' && rows.some(r => (db.participation_pings || []).some(g => g.participant_key === r.participant_key && g.event_key === r.event_key))) {
+      // 서버의 unique (participant_key, event_key) 와 같은 응답
+      result = { data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint' }, status: 409 };
     } else if (window.__mockDb.failInsert && table === 'shared_expressions') {
       result = { data: null, error: { code: 'NETWORK', message: 'Failed to fetch' } };
     } else {
       // 서버처럼 한 번의 INSERT로 들어간 행은 같은 created_at(트랜잭션 시각)을 가집니다.
       const batchAt = new Date().toISOString() + '#' + Math.random().toString(36).slice(2);   // 묶음 구분용
       const saved = rows.map(r => Object.assign({}, r, table === 'shared_expressions'
-        ? { id: db.nextId++, created_at: new Date().toISOString() } : table === 'exploration_choices' ? { created_at: batchAt } : {}));
+        ? { id: db.nextId++, created_at: new Date().toISOString() } : table === 'exploration_choices' || table === 'participation_pings' ? { created_at: batchAt } : {}));
       db[table] = (db[table] || []).concat(saved);
       save(db);
       result = { data: saved.map(r => ({ id: r.id })), error: null };
@@ -71,10 +74,13 @@
       return Promise.resolve({ data: Object.keys(counts).map(id => ({ expression_id: Number(id), empathy_count: counts[id] })), error: null });
     }
     if (name === 'participation_summary') {
-      const keys = new Set(db.expression_participants.map(p => p.participant_key));
-      // 2026-10-count-choice-participants.sql: 객관식 응답 묶음(event_key, created_at)도 참여자 수에 더함
-      const choiceSubmissions = new Set((db.exploration_choices || []).map(c => c.event_key + '|' + c.created_at)).size;
-      return Promise.resolve({ data: [{ participants: keys.size + choiceSubmissions, completed_participants: keys.size, expressions: db.shared_expressions.length }], error: null });
+      const exprKeys = new Set(db.expression_participants.map(p => p.participant_key));
+      // 2026-10-participation-pings.sql: 참여 기록 키 ∪ 공동 표현 키 + 참여 기록 시작 전 객관식 묶음
+      const pings = db.participation_pings || [];
+      const keys = new Set([...exprKeys, ...pings.map(g => g.participant_key)]);
+      const firstPing = pings.length ? pings.map(g => g.created_at).sort()[0] : null;
+      const choiceSubmissions = new Set((db.exploration_choices || []).filter(c => !firstPing || c.created_at < firstPing).map(c => c.event_key + '|' + c.created_at)).size;
+      return Promise.resolve({ data: [{ participants: keys.size + choiceSubmissions, completed_participants: exprKeys.size, expressions: db.shared_expressions.length }], error: null });
     }
     if (name === 'choice_counts') {
       if (window.__mockDb.noChoiceTable) return Promise.resolve({ data: null, error: { code: 'PGRST202', message: 'Could not find the function' } });
