@@ -597,14 +597,15 @@
         <p class="guide-step__hint" id="reflectHint"><span id="reflectCount">0</span>/300자 · 내 카드에만 담기는 나만의 기록이에요 (서버로 보내지 않아요).</p>
         <div class="reflect-recap" id="reflectRecap"><!-- JS: 내가 고른 관점 --></div>
 
-        <!-- 추가 선택: 소감 작성·카드와 무관한 객관식 익명 통계 동의 (기본 꺼짐 · 접혀 있음) -->
-        <details class="more-box reflect-extra" id="reflectExtra">
-          <summary class="more-box__summary">추가 선택 <small>객관식 익명 통계 · 소감·카드와 무관</small></summary>
+        <!-- 추가 선택: 소감 작성·카드와 무관한 객관식 익명 통계 동의 (기본 꺼짐 · 소감 아래에 따로, 펼쳐 둠)
+             접어 두면 거의 아무도 열지 않아 동의한 응답도 모이지 않았습니다(2026-10-23 확인) → 보이게 둡니다. -->
+        <div class="reflect-extra" id="reflectExtra">
+          <p class="reflect-extra__label">추가 선택 <small>객관식 익명 통계 · 소감·카드와 무관</small></p>
           <label class="consent-check consent-check--soft">
             <input type="checkbox" id="choiceShareConsent" />
             <span><strong>내가 고른 관점(객관식)만</strong> 익명 통계에 보태기 <small>(선택 · 고른 선택지 이름만 보내요. 소감·닉네임·연령대는 보내지 않습니다)</small></span>
           </label>
-        </details>
+        </div>
 
         <p class="deep-switch">
           내 문장을 다른 사람들과 나누고 싶다면 <button type="button" class="before-card__link" data-deep-switch="3">공동 표현 쓰기 (심화 탐구 · 공개는 별도 동의)</button>

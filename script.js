@@ -636,8 +636,6 @@ function resetChoiceState(eventId) {
   if (input) input.value = '';
   const consent = document.getElementById('choiceShareConsent');
   if (consent) consent.checked = false;
-  const extra = document.getElementById('reflectExtra');
-  if (extra) extra.open = false;
   const count = document.getElementById('reflectCount');
   if (count) count.textContent = '0';
 }
@@ -3532,9 +3530,6 @@ function renderReflectStep() {
   if (count && input) count.textContent = String(input.value.length);
   const consent = document.getElementById('choiceShareConsent');
   if (consent) consent.disabled = !chosenSummary().some(r => !r.skipped);
-  // 이미 동의해 둔 상태라면 '추가 선택'을 펼쳐 보여줍니다 (접혀 있어도 선택 상태가 숨지 않도록).
-  const extra = document.getElementById('reflectExtra');
-  if (extra && consent && consent.checked) extra.open = true;
 }
 
 /** 소감 칸이 비어 있으면 아래 버튼이 '소감 없이 카드 만들기'가 됩니다 (따로 '건너뛰기' 버튼을 두지 않음). */
