@@ -268,16 +268,11 @@ test('index.html: 첫 화면에 두 사건 큰 카드, 객관식·소감 단계,
   assert.match(html, /id="choiceStep"/);
   assert.match(html, /id="reflectStep"/);
   assert.doesNotMatch(html, /data-reflect-skip/);                      // 소감 건너뛰기는 카드 버튼 하나로 (중복 버튼 없음)
-  assert.match(html, /id="choiceShareConsent"/);
-  assert.doesNotMatch(html, /id="choiceShareConsent"[^>]*checked/);      // 기본은 보내지 않음
-  // 소감 입력이 먼저, 객관식 통계 동의는 그 아래 '추가 선택'에 따로 (소감 작성의 필수 동의로 보이지 않게)
-  // 접어 두지 않습니다 — 접으면 아무도 열지 않아 동의 응답이 0건이 됨 (2026-10-23 운영 로그)
-  const start = html.indexOf('<div class="reflect-extra" id="reflectExtra">');
-  const extra = html.slice(start, html.indexOf('</div>', start));
-  assert.ok(start > 0 && html.indexOf('id="reflectInput"') < start);
-  assert.match(extra, /추가 선택/);
-  assert.match(extra, /id="choiceShareConsent"/);
-  assert.doesNotMatch(html, /<details[^>]*id="reflectExtra"/);           // 접이식 아님
+  // 2026-10-23 운영자 결정: 기본 체험의 객관식 답·한 줄 소감은 동의 상자 없이 이름 없이 저장 → 동의 상자 없음,
+  // 대신 소감 입력 바로 아래에 저장된다는 사실을 안내 (예전 "서버로 보내지 않아요" 안내는 남지 않음)
+  assert.doesNotMatch(html, /id="choiceShareConsent"|id="reflectExtra"/);
+  assert.match(html, /id="reflectHint">[^<]*<span id="reflectCount">0<\/span>\/300자 · 카드에 담기고, 고른 관점과 함께 이름 없이 저장되어 프로젝트 분석에 쓰여요 \(다른 참여자에게는 공개되지 않아요\)/);
+  assert.doesNotMatch(html, /서버로 보내지 않아요/);
   assert.match(html, /<label class="reflect-label" for="reflectInput">내 카드에 남길 소감<\/label>/);
   const srcs = [...html.matchAll(/<script[^>]*\ssrc="([^"]+)"/g)].map(m => m[1]);
   assert.ok(srcs.indexOf('./choice-questions.js') >= 0 && srcs.indexOf('./choice-questions.js') < srcs.indexOf('./script.js'));

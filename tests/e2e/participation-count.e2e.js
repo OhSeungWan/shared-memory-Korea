@@ -38,16 +38,18 @@ run('participation-count', async ({ browser, base, check, mockPage }) => {
   await quickToReflect(page, base, 'imjin');
   await page.waitForFunction(() => window.__mockDb.read().participation_pings.length === 1);
   let sent = await pings(page);
-  check('설문을 마치면(소감 단계) 통계 동의 없이도 참여 1회 기록', sent.length === 1 && !(await page.isChecked('#choiceShareConsent')));
+  check('설문을 마치면(소감 단계) 동의 상자 없이 참여 1회 기록', sent.length === 1 && !(await page.$('#choiceShareConsent')));
   check('보내는 칸은 사건 이름·무작위 참여자 키뿐 (답·소감·닉네임·연령대 없음)', Object.keys(sent[0]).sort().join() === 'event_key,participant_key' &&
     sent[0].event_key === 'imjin' && sent[0].participant_key === await page.evaluate(() => localStorage.getItem('sm_participant_key')));
   await page.fill('#reflectInput', '소감은 서버로 가지 않는다');
   await page.click('[data-step-main="q3"]');
   await page.waitForSelector('.page--card.active');
-  await page.waitForTimeout(400);
+  await page.waitForFunction(() => window.__mockDb.read().exploration_reflections.length === 1);
   let d = await db(page);
   check('카드를 만들어도 같은 사건은 다시 보내지 않음', (await pings(page)).length === 1);
-  check('동의하지 않았으므로 객관식 답·소감은 서버에 없음', d.exploration_choices.length === 0 && !JSON.stringify(d).includes('소감은 서버로'));
+  check('카드를 만들면 객관식 답과 소감도 저장 (같은 묶음 번호)', d.exploration_choices.length > 0 && d.exploration_reflections.length === 1 &&
+    d.exploration_reflections[0].content === '소감은 서버로 가지 않는다' && d.exploration_choices.every(c => c.submission_id === d.exploration_reflections[0].submission_id));
+  check('참여 기록과 답·소감은 서로 잇지 않음 (답·소감에 참여자 키 없음)', !JSON.stringify(d.exploration_choices.concat(d.exploration_reflections)).includes(sent[0].participant_key));
   check('첫 화면 참여자 수 = 1', (await shownCount(page)) === 1);
 
   /* ---------- 2. 같은 사람: 다른 사건 + 공동 표현 공개 등록 → 여전히 1명 ---------- */
@@ -74,6 +76,18 @@ run('participation-count', async ({ browser, base, check, mockPage }) => {
   d = await db(page);
   check('새 참여자는 다른 키로 기록', new Set(d.participation_pings.map(g => g.participant_key)).size === 2);
   check('새 참여자도 동의 없이 셈 → 참여자 수 2', (await shownCount(page)) === 2);
+  /* ---------- 4. 답·소감 SQL(2026-10-save-answers) 실행 전: 객관식은 묶음 번호 없이라도 저장 ---------- */
+  await page.evaluate(() => { window.__mockDb.noSubmissionColumn = true; });
+  const before = (await db(page)).exploration_choices.length;
+  await page.fill('#reflectInput', 'SQL 실행 전의 소감');
+  await page.click('[data-step-main="q3"]');
+  await page.waitForSelector('.page--card.active');
+  await page.waitForFunction(n => window.__mockDb.read().exploration_choices.length > n, before);
+  d = await db(page);
+  const added = d.exploration_choices.slice(before);
+  check('SQL 실행 전: 객관식 답은 새 칸만 빼고 저장 (멈추지 않음)', added.length > 0 && added.every(r => !('submission_id' in r)));
+  check('SQL 실행 전: 소감은 저장되지 않지만 카드·화면은 그대로 (오류 안내 없음)', !JSON.stringify(d).includes('SQL 실행 전의 소감') &&
+    /SQL 실행 전의 소감/.test(await page.$eval('#memoryCard', el => el.textContent)) && !/저장하지 못했어요/.test(await page.$eval('#choiceOthers', el => el.textContent)));
   check('페이지 오류 없음', page.__errors.length === 0, page.__errors.join(' | '));
   await ctx.close();
 });
