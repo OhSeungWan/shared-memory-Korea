@@ -546,7 +546,7 @@ npm test                                            # 기록 형식 확인 (질�
 | `sm_choice_insert_guard` 트리거 | 전체 등록이 1분에 600건 이상이면 멈춤(자동 도배 방지) |
 | `choice_counts(p_event_key)` 함수 | 선택지별 수만 공개. 질문별 응답이 `sm_min_group_size()`(5) 미만이면 그 질문은 돌려주지 않음 |
 
-### 참여자 수에 객관식 참여 포함 — [`supabase/2026-10-count-choice-participants.sql`](supabase/2026-10-count-choice-participants.sql) (**미적용 · 승인 후 SQL Editor에서 실행**)
+### 참여자 수에 객관식 참여 포함 — [`supabase/2026-10-count-choice-participants.sql`](supabase/2026-10-count-choice-participants.sql) (적용 완료 2026-10-23, 마이그레이션 `count_choice_participants`)
 
 `participation_summary()`의 `participants`(첫 화면 "현재 N명이 참여")에 기본 체험 객관식 참여를 더합니다. 함수 하나만 바꾸며 반환 형식·권한은 그대로라 사이트 코드 변경은 없습니다.
 
