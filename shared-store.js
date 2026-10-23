@@ -18,6 +18,7 @@
   const AGE_RPC = 'age_group_participants';
   const LIST_RPC = 'public_expressions';
   const CHOICE_TABLE = 'exploration_choices';   // 기본 체험 객관식 응답 (공동 표현과 별도 테이블)
+  const PING_TABLE = 'participation_pings';      // 참여자 수 집계용 (사건 이름 + 무작위 참여자 키만)
   const CHOICE_RPC = 'choice_counts';
   const CHOICE_ID_RE = /^[a-z0-9_]{1,40}$/;
   // 공개 조회 컬럼 (age_group 제외). 2단계 SQL 이후에는 테이블에서 age_group 을 직접 읽을 수 없습니다.
@@ -384,6 +385,29 @@
     }
   }
 
+  /**
+   * 참여 1회 기록 (참여자 수 집계용). 사건 이름과 이 브라우저의 무작위 참여자 키만 보내며,
+   * 답·문장·닉네임·연령대는 보내지 않습니다. 사건마다 한 번만 보냅니다(서버도 같은 키·사건은 한 번만 저장).
+   * 테이블이 아직 없으면(SQL 실행 전) 표시하지 않고 다음에 다시 시도합니다.
+   * @returns {{ok, already?, unavailable?, error?}}
+   */
+  async function recordParticipation(eventKey) {
+    if (typeof eventKey !== 'string' || !/^[a-z0-9_]{1,40}$/.test(eventKey)) return { ok: false, error: 'bad event' };
+    const flag = 'sm_counted_' + eventKey;
+    if (storageGet(flag)) return { ok: true, already: true };
+    const c = client();
+    if (!c) return { ok: false, unavailable: true };
+    try {
+      const res = await c.from(PING_TABLE).insert([{ event_key: eventKey, participant_key: participantKey() }]);
+      const dup = res.error && (res.error.code === '23505' || res.status === 409);
+      if (!res.error || dup) { storageSet(flag, '1'); return { ok: true, already: !!dup }; }
+      if (isMissingSchemaError(res.error)) return { ok: false, unavailable: true };
+      return { ok: false, error: friendlyError(res.error) };
+    } catch (e) {
+      return { ok: false, error: friendlyError(e) };
+    }
+  }
+
   /** 사건별 객관식 집계 → { available, rows: [{question_id, option_id, n}] } (작은 표본은 서버가 숨김) */
   async function fetchChoiceCounts(eventKey) {
     const c = client();
@@ -458,6 +482,7 @@
     fetchAgeGroupParticipants,
     insertChoices,
     fetchChoiceCounts,
+    recordParticipation,
     empathizedSet,
     storageGet,
     storageSet,
