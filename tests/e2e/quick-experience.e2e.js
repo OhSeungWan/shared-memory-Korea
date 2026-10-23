@@ -123,8 +123,8 @@ run('quick-experience', async ({ browser, base, check, mockPage }) => {
   const recap = await page.$eval('#reflectRecap', el => el.innerText);
   check('내가 고른 관점 다시 보기 (건너뛴 질문은 없음)', /서로 다른 이름을 함께 보여 주는 것/.test(recap) && /서로 다른 이름과 시선/.test(recap) && !/꼭 기억할 장면/.test(recap), recap);
   check('통계 동의는 기본 꺼짐', !(await page.isChecked('#choiceShareConsent')));
-  check('통계 동의는 소감 입력 아래 접힌 "추가 선택"에 따로 (소감 작성과 분리)', !(await page.isVisible('#choiceShareConsent')) &&
-    /추가 선택/.test(await page.textContent('#reflectExtra > summary')) &&
+  check('통계 동의는 소감 입력 아래 "추가 선택"에 따로 · 접지 않고 보임 (소감 작성과 분리)', await page.isVisible('#choiceShareConsent') &&
+    /추가 선택/.test(await page.textContent('#reflectExtra .reflect-extra__label')) &&
     await page.evaluate(() => !!(document.getElementById('reflectInput').compareDocumentPosition(document.getElementById('reflectExtra')) & Node.DOCUMENT_POSITION_FOLLOWING)));
   check('소감 입력란 이름 "내 카드에 남길 소감" · 카드에 담긴다는 안내', /내 카드에 남길 소감/.test(await page.textContent('label[for="reflectInput"]')) &&
     await page.isVisible('label[for="reflectInput"]') && /My Memory Card/.test(await page.textContent('#reflectStep .step-head__desc')));
@@ -167,7 +167,6 @@ run('quick-experience', async ({ browser, base, check, mockPage }) => {
   check('카드에서 돌아오면 STEP 3, 고른 관점 그대로', (await step(page)) === 'quick:3' && /서로 다른 이름을 함께 보여 주는 것/.test(await page.$eval('#reflectRecap', el => el.innerText)));
   const REFLECT = '이름 하나에도 각 나라가 이 전쟁을 보는 눈이 담겨 있다는 게 새로웠다.';
   await page.fill('#reflectInput', REFLECT);
-  if (!(await page.$eval('#reflectExtra', el => el.open))) await page.click('#reflectExtra > summary');   // 추가 선택 펼치기
   await page.check('#choiceShareConsent');
   await page.click('[data-step-main="q3"]');
   await page.waitForSelector('.page--card.active');
@@ -240,7 +239,6 @@ run('quick-experience', async ({ browser, base, check, mockPage }) => {
   check('작은 화면(360×740)에서도 고른 뒤 "다음 질문" 버튼이 보임', await inViewport(page, '[data-step-main="q2"]') &&
     (await page.textContent('[data-step-main="q2"]')).trim().startsWith('다음 질문'));
   for (let i = 0; i < 3; i++) await page.click('[data-step-main="q2"]');   // 다음 → 건너뛰기 → 건너뛰고 소감
-  if (!(await page.$eval('#reflectExtra', el => el.open))) await page.click('#reflectExtra > summary');   // 추가 선택 펼치기
   await page.check('#choiceShareConsent');
   await page.click('[data-step-main="q3"]');
   await page.waitForSelector('.page--card.active');
