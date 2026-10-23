@@ -175,7 +175,8 @@ run('quick-experience', async ({ browser, base, check, mockPage }) => {
   check('카드에 직접 쓴 소감이 입력 그대로', (await page.$eval('#memoryCard .memory-card__reflect blockquote', el => el.textContent)) === `“${REFLECT}”`);
   d = await db(page);
   check('동의하면 객관식만 별도 테이블에 (건너뛴 질문 제외)', JSON.stringify(d.exploration_choices.map(r => [r.question_id, r.option_id])) === JSON.stringify([['name_focus', 'many_names'], ['textbook_line', 'side_by_side']]), JSON.stringify(d.exploration_choices));
-  check('저장 행에는 사건·질문·선택지 id만 (소감·닉네임·키 없음)', d.exploration_choices.every(r => Object.keys(r).sort().join() === 'event_key,option_id,question_id'));
+  const sentChoices = await page.evaluate(() => window.__mockDb.calls.filter(c => c.op === 'insert' && c.table === 'exploration_choices').flatMap(c => c.rows));
+  check('보낸 행에는 사건·질문·선택지 id만 (소감·닉네임·키·시각 없음)', sentChoices.length > 0 && sentChoices.every(r => Object.keys(r).sort().join() === 'event_key,option_id,question_id'));
   check('소감은 공동 표현으로 등록되지 않음 (공개는 별도)', d.shared_expressions.length === 0 && !JSON.stringify(d).includes(REFLECT));
   check('질문별 응답 5명 미만이면 결과 숨김', /5명 미만/.test(await page.$eval('#choiceOthers', el => el.textContent)));
   await page.click('[data-card-action="back"]');
@@ -183,6 +184,11 @@ run('quick-experience', async ({ browser, base, check, mockPage }) => {
   await page.waitForSelector('.page--card.active');
   await page.waitForTimeout(400);
   check('같은 답으로 카드를 다시 만들어도 중복 저장하지 않음', (await db(page)).exploration_choices.length === 2);
+  // 참여자 수: 공동 표현 없이 객관식만 동의해 보낸 참여도 1명으로 셈 (한 번에 보낸 응답 묶음 = 1)
+  await page.evaluate(() => loadParticipantCount());
+  await page.waitForFunction(() => !document.getElementById('participantCount').hidden);
+  check('객관식만 보낸 참여도 첫 화면 참여자 수에 포함 (응답 2개 = 1명)', /현재 1명이/.test(await page.$eval('#participantCount', el => el.textContent)),
+    await page.$eval('#participantCount', el => el.textContent));
 
   // 다른 참여자들의 응답이 모였을 때 (가짜 DB에 직접 추가 — 서버 집계와 같은 규칙)
   await page.evaluate(() => {

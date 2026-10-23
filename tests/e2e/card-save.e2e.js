@@ -19,6 +19,7 @@ async function toCard(page, base, reflect) {
     await page.waitForTimeout(600);
     if (await page.$eval('.page--detail', el => el.dataset.step) === '3') break;
     await page.click('#choiceStep [data-choice-option]');
+    await page.click('[data-step-main="q2"]');                       // 고른 뒤 '다음 질문'으로 이동 (#32)
   }
   await page.waitForFunction(() => document.querySelector('.page--detail').dataset.step === '3');
   await page.fill('#reflectInput', reflect);
