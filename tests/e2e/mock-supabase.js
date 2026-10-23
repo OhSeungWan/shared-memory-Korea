@@ -6,7 +6,7 @@
   'use strict';
   const KEY = '__mock_db';
   let memory = null;                      // sessionStorage를 쓸 수 없는 환경(테스트)용
-  const empty = () => ({ shared_expressions: [], expression_participants: [], expression_empathy: [], exploration_choices: [], participation_pings: [], nextId: 100 });
+  const empty = () => ({ shared_expressions: [], expression_participants: [], expression_empathy: [], exploration_choices: [], exploration_reflections: [], participation_pings: [], nextId: 100 });
   function load() {
     try { const v = sessionStorage.getItem(KEY); if (v) return JSON.parse(v); } catch (e) { /* 메모리 사용 */ }
     return memory ? JSON.parse(JSON.stringify(memory)) : empty();
@@ -24,6 +24,11 @@
     if (window.__mockDb.noChoiceTable && table === 'exploration_choices') {
       // 객관식 SQL을 아직 실행하지 않은 운영 DB와 같은 응답
       result = { data: null, error: { code: 'PGRST205', message: "Could not find the table 'public.exploration_choices' in the schema cache" } };
+    } else if (window.__mockDb.noSubmissionColumn && table === 'exploration_choices' && rows.some(r => 'submission_id' in r)) {
+      // 2026-10-save-answers.sql 실행 전 운영 DB와 같은 응답 (새 칸 없음)
+      result = { data: null, error: { code: 'PGRST204', message: "Could not find the 'submission_id' column of 'exploration_choices' in the schema cache" } };
+    } else if (window.__mockDb.noSubmissionColumn && table === 'exploration_reflections') {
+      result = { data: null, error: { code: 'PGRST205', message: "Could not find the table 'public.exploration_reflections' in the schema cache" } };
     } else if (table === 'participation_pings' && rows.some(r => (db.participation_pings || []).some(g => g.participant_key === r.participant_key && g.event_key === r.event_key))) {
       // 서버의 unique (participant_key, event_key) 와 같은 응답
       result = { data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint' }, status: 409 };
@@ -33,7 +38,7 @@
       // 서버처럼 한 번의 INSERT로 들어간 행은 같은 created_at(트랜잭션 시각)을 가집니다.
       const batchAt = new Date().toISOString() + '#' + Math.random().toString(36).slice(2);   // 묶음 구분용
       const saved = rows.map(r => Object.assign({}, r, table === 'shared_expressions'
-        ? { id: db.nextId++, created_at: new Date().toISOString() } : table === 'exploration_choices' || table === 'participation_pings' ? { created_at: batchAt } : {}));
+        ? { id: db.nextId++, created_at: new Date().toISOString() } : table === 'exploration_choices' || table === 'participation_pings' || table === 'exploration_reflections' ? { created_at: batchAt } : {}));
       db[table] = (db[table] || []).concat(saved);
       save(db);
       result = { data: saved.map(r => ({ id: r.id })), error: null };

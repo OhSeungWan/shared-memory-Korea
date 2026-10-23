@@ -122,10 +122,9 @@ run('quick-experience', async ({ browser, base, check, mockPage }) => {
   check('STEP 3 · 한 줄 소감', (await step(page)) === 'quick:3' && await page.isVisible('#reflectInput'));
   const recap = await page.$eval('#reflectRecap', el => el.innerText);
   check('내가 고른 관점 다시 보기 (건너뛴 질문은 없음)', /서로 다른 이름을 함께 보여 주는 것/.test(recap) && /서로 다른 이름과 시선/.test(recap) && !/꼭 기억할 장면/.test(recap), recap);
-  check('통계 동의는 기본 꺼짐', !(await page.isChecked('#choiceShareConsent')));
-  check('통계 동의는 소감 입력 아래 "추가 선택"에 따로 · 접지 않고 보임 (소감 작성과 분리)', await page.isVisible('#choiceShareConsent') &&
-    /추가 선택/.test(await page.textContent('#reflectExtra .reflect-extra__label')) &&
-    await page.evaluate(() => !!(document.getElementById('reflectInput').compareDocumentPosition(document.getElementById('reflectExtra')) & Node.DOCUMENT_POSITION_FOLLOWING)));
+  check('동의 상자 없음 · 소감 바로 아래에 "이름 없이 저장 · 다른 참여자에게 비공개" 안내', !(await page.$('#choiceShareConsent')) &&
+    /이름 없이 저장되어 프로젝트 분석에 쓰여요/.test(await page.textContent('#reflectHint')) && /공개되지 않아요/.test(await page.textContent('#reflectHint')) &&
+    await page.isVisible('#reflectHint'));
   check('소감 입력란 이름 "내 카드에 남길 소감" · 카드에 담긴다는 안내', /내 카드에 남길 소감/.test(await page.textContent('label[for="reflectInput"]')) &&
     await page.isVisible('label[for="reflectInput"]') && /My Memory Card/.test(await page.textContent('#reflectStep .step-head__desc')));
   check('소감 입력란이 첫 화면 안에 보임 (모바일)', await inViewport(page, '#reflectInput'));
@@ -149,8 +148,13 @@ run('quick-experience', async ({ browser, base, check, mockPage }) => {
   check('소감을 건너뛰면 "소감은 남기지 않았어요" (지어내지 않음)', /소감은 남기지 않았어요/.test(await page.$eval('#memoryCard .memory-card__reflect', el => el.textContent)));
   const stamps = await page.$$eval('#memoryCard .memory-card__stamps li', els => els.map(e => [e.textContent.trim().slice(1, 6), e.classList.contains('is-done')]));
   check('도장: 관점 고르기 ✓, 한 줄 소감 ✗, 공개 ✗', stamps[1][1] === true && stamps[2][1] === false && stamps[3][1] === false, JSON.stringify(stamps));
+  await page.waitForFunction(() => window.__mockDb.read().exploration_choices.length === 2);
   let d = await db(page);
-  check('동의하지 않으면 객관식도 공동 표현도 서버 저장 0건', d.exploration_choices.length === 0 && d.shared_expressions.length === 0);
+  check('카드를 만들면 동의 상자 없이 객관식 답 저장 (건너뛴 질문 제외) · 공동 표현은 0건', JSON.stringify(d.exploration_choices.map(r => [r.question_id, r.option_id])) === JSON.stringify([['name_focus', 'many_names'], ['textbook_line', 'side_by_side']]) &&
+    d.shared_expressions.length === 0, JSON.stringify(d.exploration_choices));
+  check('소감을 건너뛰면 소감은 저장하지 않음 (빈 소감 행 없음)', d.exploration_reflections.length === 0);
+  const firstSubmission = d.exploration_choices[0].submission_id;
+  check('같은 카드의 객관식 답은 하나의 무작위 묶음 번호(UUID)', /^[0-9a-f-]{36}$/.test(firstSubmission || '') && d.exploration_choices.every(r => r.submission_id === firstSubmission));
   check('카드 화면 가로 넘침 없음', await noHScroll(page));
   const order = await page.evaluate(() => ['#memoryCard', '[data-card-action="png"]', '.card-design'].map(sel => document.querySelector(sel).getBoundingClientRect().top));
   check('카드가 먼저, 저장 버튼, 그다음 디자인 고르기', order[0] < order[1] && order[1] < order[2], JSON.stringify(order.map(Math.round)));
@@ -161,28 +165,40 @@ run('quick-experience', async ({ browser, base, check, mockPage }) => {
   const png = pngSize(fs.readFileSync(await dl.path()));
   check('기본 체험 카드도 PNG 저장 (1080px)', png.png && png.width === 1080 && png.height >= 1350, JSON.stringify(png));
 
-  /* ---------- 5. 소감을 쓰고, 통계 동의 → 별도 테이블에 선택지 id만 ---------- */
+  /* ---------- 5. 소감을 쓰면 → 비공개 테이블에 같은 묶음 번호로 저장 ---------- */
   await page.click('[data-card-action="back"]');
   await page.waitForSelector('.page--detail.active');
   check('카드에서 돌아오면 STEP 3, 고른 관점 그대로', (await step(page)) === 'quick:3' && /서로 다른 이름을 함께 보여 주는 것/.test(await page.$eval('#reflectRecap', el => el.innerText)));
   const REFLECT = '이름 하나에도 각 나라가 이 전쟁을 보는 눈이 담겨 있다는 게 새로웠다.';
   await page.fill('#reflectInput', REFLECT);
-  await page.check('#choiceShareConsent');
   await page.click('[data-step-main="q3"]');
   await page.waitForSelector('.page--card.active');
-  await page.waitForFunction(() => /익명 통계에 보탰어요/.test(document.getElementById('choiceOthers').textContent));
+  await page.waitForFunction(() => window.__mockDb.read().exploration_reflections.length === 1);
   check('카드에 직접 쓴 소감이 입력 그대로', (await page.$eval('#memoryCard .memory-card__reflect blockquote', el => el.textContent)) === `“${REFLECT}”`);
   d = await db(page);
-  check('동의하면 객관식만 별도 테이블에 (건너뛴 질문 제외)', JSON.stringify(d.exploration_choices.map(r => [r.question_id, r.option_id])) === JSON.stringify([['name_focus', 'many_names'], ['textbook_line', 'side_by_side']]), JSON.stringify(d.exploration_choices));
+  check('소감은 입력 그대로, 같은 카드의 객관식 답과 같은 묶음 번호로 저장', d.exploration_reflections[0].content === REFLECT &&
+    d.exploration_reflections[0].event_key === 'imjin' && d.exploration_reflections[0].submission_id === firstSubmission);
+  check('같은 답이면 객관식은 다시 보내지 않음 (2행 그대로)', d.exploration_choices.length === 2);
   const sentChoices = await page.evaluate(() => window.__mockDb.calls.filter(c => c.op === 'insert' && c.table === 'exploration_choices').flatMap(c => c.rows));
-  check('보낸 행에는 사건·질문·선택지 id만 (소감·닉네임·키·시각 없음)', sentChoices.length > 0 && sentChoices.every(r => Object.keys(r).sort().join() === 'event_key,option_id,question_id'));
-  check('소감은 공동 표현으로 등록되지 않음 (공개는 별도)', d.shared_expressions.length === 0 && !JSON.stringify(d).includes(REFLECT));
+  const sentReflections = await page.evaluate(() => window.__mockDb.calls.filter(c => c.op === 'insert' && c.table === 'exploration_reflections').flatMap(c => c.rows));
+  check('보낸 객관식 행: 사건·질문·선택지 id·묶음 번호만 (소감·닉네임·참여자 키 없음)', sentChoices.length > 0 && sentChoices.every(r => Object.keys(r).sort().join() === 'event_key,option_id,question_id,submission_id'));
+  check('보낸 소감 행: 사건·묶음 번호·소감만 (닉네임·연령대·참여자 키 없음)', sentReflections.length === 1 && Object.keys(sentReflections[0]).sort().join() === 'content,event_key,submission_id');
+  check('소감은 공동 표현으로 등록되지 않음 (다른 참여자에게 공개되지 않음)', d.shared_expressions.length === 0 && !JSON.stringify(d.shared_expressions).includes(REFLECT));
   check('질문별 응답 5명 미만이면 결과 숨김', /5명 미만/.test(await page.$eval('#choiceOthers', el => el.textContent)));
   await page.click('[data-card-action="back"]');
   await page.click('[data-step-main="q3"]');
   await page.waitForSelector('.page--card.active');
   await page.waitForTimeout(400);
-  check('같은 답으로 카드를 다시 만들어도 중복 저장하지 않음', (await db(page)).exploration_choices.length === 2);
+  d = await db(page);
+  check('같은 답·같은 소감으로 카드를 다시 만들어도 중복 저장하지 않음', d.exploration_choices.length === 2 && d.exploration_reflections.length === 1);
+  await page.click('[data-card-action="back"]');
+  await page.fill('#reflectInput', REFLECT + ' 고쳐 씀');
+  await page.click('[data-step-main="q3"]');
+  await page.waitForSelector('.page--card.active');
+  await page.waitForFunction(() => window.__mockDb.read().exploration_reflections.length === 2);
+  d = await db(page);
+  check('소감을 고쳐 다시 만들면 고친 소감만 새로 저장 (같은 묶음 번호)', d.exploration_reflections[1].content === REFLECT + ' 고쳐 씀' &&
+    d.exploration_reflections[1].submission_id === firstSubmission && d.exploration_choices.length === 2);
   // 참여자 수: 공동 표현 없이 객관식만 동의해 보낸 참여도 1명으로 셈 (한 번에 보낸 응답 묶음 = 1)
   await page.evaluate(() => loadParticipantCount());
   await page.waitForFunction(() => !document.getElementById('participantCount').hidden);
@@ -206,7 +222,7 @@ run('quick-experience', async ({ browser, base, check, mockPage }) => {
   await page.click('[data-deep-switch="3"]');
   await page.waitForTimeout(300);
   check('심화 탐구 전환: 공동 표현 쓰기(기존 STEP 3), 탭 보임', (await step(page)) === 'deep:3' && await page.isVisible('.tabs') && await page.isVisible('#userNarrative'));
-  check('쓴 소감을 공동 표현 칸에 옮겨 줌 (공개 전)', (await page.inputValue('#userNarrative')) === REFLECT && (await db(page)).shared_expressions.length === 0);
+  check('쓴 소감(고친 최신 문장)을 공동 표현 칸에 옮겨 줌 (공개 전)', (await page.inputValue('#userNarrative')) === REFLECT + ' 고쳐 씀' && (await db(page)).shared_expressions.length === 0);
   await page.click('#submitNarrative');
   check('공개 등록은 여전히 별도 동의가 있어야 함', (await db(page)).shared_expressions.length === 0 && /동의 상자에 체크/.test(await page.$eval('#submitStatus', el => el.textContent)));
   await page.click('[data-quick-return]');
@@ -218,8 +234,8 @@ run('quick-experience', async ({ browser, base, check, mockPage }) => {
   page.__dialogAnswer = true;
   await page.click('#flowProgress [data-new-participant]');
   await page.waitForSelector('.page--home.active');
-  check('새 참여자: 고른 답·소감·통계 동의를 지움', await page.evaluate(() => Object.keys(choiceState.answers).length === 0 && choiceState.reflection === '' &&
-    !document.getElementById('choiceShareConsent').checked && document.getElementById('reflectInput').value === ''));
+  check('새 참여자: 고른 답·소감·묶음 번호를 지움', await page.evaluate(() => Object.keys(choiceState.answers).length === 0 && choiceState.reflection === '' &&
+    choiceState.submissionId === null && document.getElementById('reflectInput').value === ''));
   await mobile.close();
 
   /* ---------- 8. QR 링크 · 다른 사건 · SQL 실행 전 (휴대폰) ---------- */
@@ -239,12 +255,12 @@ run('quick-experience', async ({ browser, base, check, mockPage }) => {
   check('작은 화면(360×740)에서도 고른 뒤 "다음 질문" 버튼이 보임', await inViewport(page, '[data-step-main="q2"]') &&
     (await page.textContent('[data-step-main="q2"]')).trim().startsWith('다음 질문'));
   for (let i = 0; i < 3; i++) await page.click('[data-step-main="q2"]');   // 다음 → 건너뛰기 → 건너뛰고 소감
-  await page.check('#choiceShareConsent');
+  await page.fill('#reflectInput', '테이블이 없어도 카드는 만들어져야 한다');
   await page.click('[data-step-main="q3"]');
   await page.waitForSelector('.page--card.active');
-  await page.waitForFunction(() => /준비 중/.test(document.getElementById('choiceOthers').textContent));
-  check('통계 SQL 실행 전이면 "준비 중" 안내 · 카드는 그대로', /준비 중/.test(await page.$eval('#choiceOthers', el => el.textContent)) &&
-    /국적과 법적 지위가 바뀐 과정/.test(await page.$eval('#memoryCard', el => el.textContent)));
+  await page.waitForTimeout(600);
+  check('객관식 SQL 실행 전이어도 카드는 그대로 · 오류 안내 없음', /국적과 법적 지위가 바뀐 과정/.test(await page.$eval('#memoryCard', el => el.textContent)) &&
+    !/저장하지 못했어요/.test(await page.$eval('#choiceOthers', el => el.textContent)));
   check('작은 화면(360px) 카드 가로 넘침 없음', await noHScroll(page));
 
   await page.goto(base + 'index.html#/e/culture');

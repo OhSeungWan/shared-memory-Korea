@@ -591,21 +591,12 @@
           <h3 class="step-head__q" id="reflectPrompt">탐구를 마친 지금, <span class="hl-ink">내 카드에 남길 소감</span>을 한 문장으로 적어 볼까요?</h3>
           <p class="step-head__desc">적은 문장은 <strong>My Memory Card</strong>에 그대로 담겨요. 쓰지 않고 넘어가도 카드는 만들어져요.</p>
         </div>
-        <!-- 소감 입력을 가장 먼저 · 가장 크게 (카드에만 담김 · 서버로 보내지 않음) -->
+        <!-- 소감 입력을 가장 먼저 · 가장 크게 (카드에 담기고, 이름 없이 비공개로 저장 · 다른 참여자에게 공개하지 않음) -->
         <label class="reflect-label" for="reflectInput">내 카드에 남길 소감</label>
         <textarea id="reflectInput" class="shared-form__textarea shared-form__textarea--main" rows="3" maxlength="300" aria-describedby="reflectHint" placeholder="예: 이름 하나에도 각 나라가 이 전쟁을 보는 눈이 담겨 있다는 게 새로웠다."></textarea>
-        <p class="guide-step__hint" id="reflectHint"><span id="reflectCount">0</span>/300자 · 내 카드에만 담기는 나만의 기록이에요 (서버로 보내지 않아요).</p>
+        <p class="guide-step__hint" id="reflectHint"><span id="reflectCount">0</span>/300자 · 카드에 담기고, 고른 관점과 함께 이름 없이 저장되어 프로젝트 분석에 쓰여요 (다른 참여자에게는 공개되지 않아요).</p>
         <div class="reflect-recap" id="reflectRecap"><!-- JS: 내가 고른 관점 --></div>
 
-        <!-- 추가 선택: 소감 작성·카드와 무관한 객관식 익명 통계 동의 (기본 꺼짐 · 소감 아래에 따로, 펼쳐 둠)
-             접어 두면 거의 아무도 열지 않아 동의한 응답도 모이지 않았습니다(2026-10-23 확인) → 보이게 둡니다. -->
-        <div class="reflect-extra" id="reflectExtra">
-          <p class="reflect-extra__label">추가 선택 <small>객관식 익명 통계 · 소감·카드와 무관</small></p>
-          <label class="consent-check consent-check--soft">
-            <input type="checkbox" id="choiceShareConsent" />
-            <span><strong>내가 고른 관점(객관식)만</strong> 익명 통계에 보태기 <small>(선택 · 고른 선택지 이름만 보내요. 소감·닉네임·연령대는 보내지 않습니다)</small></span>
-          </label>
-        </div>
 
         <p class="deep-switch">
           내 문장을 다른 사람들과 나누고 싶다면 <button type="button" class="before-card__link" data-deep-switch="3">공동 표현 쓰기 (심화 탐구 · 공개는 별도 동의)</button>
@@ -691,11 +682,11 @@
         <details class="faq__item"><summary>분석 결과가 미리 정해진(하드코딩된) 값은 아닌가요?</summary>
           <p>아닙니다. 모든 수치는 화면에 보이는 서술 텍스트와 저장된 참여 문장에서 매번 계산됩니다. 서술 문장을 바꾸면 결과도 바뀌며, 이를 자동 테스트로 확인합니다. 사람이 쓴 해석(편집자 해설)은 자동 분석과 구분해 따로 표시합니다.</p></details>
         <details class="faq__item"><summary>학생 데이터는 어떻게 보호하나요?</summary>
-          <p>이름·연락처·학교·정확한 나이는 받지 않고, 연령대는 10년 단위로만 선택합니다. 공개되는 닉네임에 연락처·학교명이 들어가면 등록을 막습니다. 데이터베이스는 공개 키와 행 수준 보안(RLS)으로 보호되며, 참여자 구분용 무작위 키는 외부에서 읽을 수 없습니다. 5명 미만인 연령대는 서버에서 연령대 정보를 가립니다. 첫 화면의 참여자 수를 세기 위해, 설문을 마치거나 카드를 만들거나 공동 표현을 등록하면 <strong>사건 이름과 이 브라우저의 무작위 키만</strong> 한 번 기록합니다(답·소감·문장·닉네임·연령대는 보내지 않음).</p></details>
+          <p>이름·연락처·학교·정확한 나이는 받지 않고, 연령대는 10년 단위로만 선택합니다. 공개되는 닉네임에 연락처·학교명이 들어가면 등록을 막습니다. 데이터베이스는 공개 키와 행 수준 보안(RLS)으로 보호되며, 참여자 구분용 무작위 키는 외부에서 읽을 수 없습니다. 5명 미만인 연령대는 서버에서 연령대 정보를 가립니다. 첫 화면의 참여자 수를 세기 위해, 설문을 마치거나 카드를 만들거나 공동 표현을 등록하면 <strong>사건 이름과 이 브라우저의 무작위 키만</strong> 한 번 기록합니다. 기본 체험에서 카드를 만들면 <strong>고른 관점(객관식)과 한 줄 소감을 이름 없이</strong> 저장해 프로젝트 분석에 씁니다. 소감은 다른 참여자에게 공개하지 않으며 운영자만 볼 수 있습니다. 소감에는 이름·학교·연락처를 쓰지 말아 주세요.</p></details>
         <details class="faq__item"><summary>실제 수업에서는 어떻게 쓰나요?</summary>
           <p><strong>QR로 5분 체험:</strong> 첫 화면의 ‘수업·전시용 사건별 QR 만들기’에서 사건별 QR을 인쇄해 나눠 주면, 학생은 QR을 찍어 바로 그 사건의 탐구를 시작하고 마지막에 My Memory Card를 저장합니다. <strong>한 차시 수업:</strong> 한 차시(약 20–30분) 기준으로, ① 탐구 전 한 문장 → ② 세 나라의 서술 읽기 → ③ ‘어떻게 다를까?’에서 공통점·차이점 확인 → ④ 관련 사료 1개 확인 → ⑤ 내 한 문장 쓰기 → ⑥ 반 전체의 기억 보기 순서로 진행할 수 있습니다. 교사는 ⑥의 표현군과 탐구 전·후 변화를 토론 자료로 쓸 수 있습니다.</p></details>
         <details class="faq__item"><summary>My Memory Card에는 무엇이 담기고, 어디에 저장되나요?</summary>
-          <p>사건과 역사적 질문, 참여자가 직접 쓴 탐구 전·후 문장, 직접 고른 ‘새롭게 발견한 관점’과 남은 질문, 실제로 열어 본 탐구 단계(세 나라 서술·비교 분석·사료)가 담깁니다. 문장을 고치거나 요약하지 않으며, 탐구 전·후 비교는 실제로 새로 쓴 단어와 계속 쓴 단어만 보여 줍니다. 카드는 참여자의 기기 안에서만 만들어지고 서버로 보내지 않습니다. 공개 등록은 별도의 동의를 받을 때만 이루어지며, 공개하지 않아도 카드를 받을 수 있습니다.</p></details>
+          <p>사건과 역사적 질문, 참여자가 직접 쓴 탐구 전·후 문장, 직접 고른 ‘새롭게 발견한 관점’과 남은 질문, 실제로 열어 본 탐구 단계(세 나라 서술·비교 분석·사료)가 담깁니다. 문장을 고치거나 요약하지 않으며, 탐구 전·후 비교는 실제로 새로 쓴 단어와 계속 쓴 단어만 보여 줍니다. 카드 이미지는 참여자의 기기 안에서만 만들어지고 서버로 보내지 않습니다. 다만 기본 체험에서 고른 관점(객관식)과 한 줄 소감은 이름 없이 저장되어 프로젝트 분석에 쓰이며, 다른 참여자에게는 공개되지 않습니다. 공개 등록은 별도의 동의를 받을 때만 이루어지며, 공개하지 않아도 카드를 받을 수 있습니다.</p></details>
         <details class="faq__item"><summary>활동 전·후 변화가 교육 효과를 증명하나요?</summary>
           <p>그렇게 말할 수 없습니다. 탐구 전·후 문장의 어휘·개념 변화는 이 활동 안에서 관찰된 기술적(descriptive) 결과이며, 대조군이 없고 참여자가 무작위 표본이 아니므로 교육 효과를 증명하지 않습니다. “표현이 이렇게 달라졌다”는 관찰 자료로만 사용합니다.</p></details>
         <details class="faq__item"><summary>사료와 분석 결과는 어떻게 연결되나요?</summary>
@@ -757,7 +748,7 @@
           <p class="card-actions__hint no-print" id="cardStoryHint" hidden>휴대폰에서 <strong>‘인스타 스토리로 공유’</strong>를 누른 뒤 Instagram → <strong>스토리</strong>를 고르면 바로 올릴 수 있어요. 공유 메뉴가 없으면 이미지를 저장하고 인스타그램 스토리에서 사진을 고르세요.</p>
           <p class="card-actions__status no-print" id="cardActionStatus" role="status" aria-live="polite"></p>
           <p class="card-actions__status no-print"><button type="button" class="before-card__link" data-card-action="open-image" hidden>저장이 안 되나요? 이미지로 열기 (길게 눌러 저장)</button></p>
-          <p class="card-actions__note no-print">카드는 이 기기 안에서만 만들어지고, Shared Memory 서버로 전송되지 않습니다. 공용 기기라면 저장한 뒤 ‘새 참여자로 시작’을 눌러 주세요.</p>
+          <p class="card-actions__note no-print">카드 이미지는 이 기기 안에서만 만들어지고 서버로 보내지 않습니다. (기본 체험에서 고른 관점과 한 줄 소감은 이름 없이 저장되며, 다른 참여자에게는 공개되지 않습니다.) 공용 기기라면 저장한 뒤 ‘새 참여자로 시작’을 눌러 주세요.</p>
           <!-- 기본 체험: 다른 참여자들이 고른 관점 (객관식 집계 · 질문별 5명 미만이면 숨김) -->
           <section class="choice-others no-print" id="choiceOthers" aria-live="polite" hidden></section>
         </div>

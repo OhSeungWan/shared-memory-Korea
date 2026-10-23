@@ -621,7 +621,8 @@ function setExploreMode(mode) {
 }
 
 /* 기본 체험 상태 — 이 창의 메모리에만 둡니다(공용 기기 보호: 새로고침·새 참여자로 시작하면 사라짐) */
-const choiceState = { eventId: null, answers: {}, index: 0, offsets: {}, reflection: '', reflectionSkipped: false, maxStep: 1, sent: false };
+// submissionId: 같은 카드의 객관식·소감을 묶는 무작위 번호 · sentReflection: 마지막으로 저장한 소감 (같은 문장 중복 저장 방지)
+const choiceState = { eventId: null, answers: {}, index: 0, offsets: {}, reflection: '', reflectionSkipped: false, maxStep: 1, sent: false, submissionId: null, sentReflection: '' };
 
 function resetChoiceState(eventId) {
   choiceState.eventId = eventId || null;
@@ -632,10 +633,10 @@ function resetChoiceState(eventId) {
   choiceState.reflectionSkipped = false;
   choiceState.maxStep = 1;
   choiceState.sent = false;
+  choiceState.submissionId = null;
+  choiceState.sentReflection = '';
   const input = document.getElementById('reflectInput');
   if (input) input.value = '';
-  const consent = document.getElementById('choiceShareConsent');
-  if (consent) consent.checked = false;
   const count = document.getElementById('reflectCount');
   if (count) count.textContent = '0';
 }
@@ -3368,8 +3369,9 @@ function renderMemoryMethod(a) {
 /* ------------------------------------------------------------
    기본 체험 — 관점 고르기(객관식) · 한 줄 소감 · 카드
    · 객관식은 퀴즈가 아닙니다. 고른 관점은 정답 판정 없이 카드에 "내가 고른 관점"으로만 담깁니다.
-   · 한 줄 소감은 "직접 쓴 문장"으로 따로 담고, 공개하지 않습니다(공개는 심화 탐구의 공동 표현에서 별도 동의).
-   · 고른 관점은 '익명 통계에 보태기'에 체크했을 때만 서버(별도 테이블)로 보냅니다.
+   · 한 줄 소감은 "직접 쓴 문장"으로 따로 담고, 다른 참여자에게 공개하지 않습니다(공개는 심화 탐구의 공동 표현에서 별도 동의).
+   · 카드를 만들면 고른 관점(별도 테이블)과 한 줄 소감(비공개 테이블)을 이름 없이 저장합니다.
+     두 기록은 같은 카드에서 나온 것임을 알 수 있도록 무작위 번호(submission_id)로만 묶습니다.
    ------------------------------------------------------------ */
 
 function quickQuestions() { return Choices ? Choices.questionsFor(currentEventId) : []; }
@@ -3496,6 +3498,8 @@ function pickChoice(optionId) {
   if (!q || !Choices.isValidAnswer(currentEventId, q.id, optionId)) return;
   choiceState.answers[q.id] = optionId;
   choiceState.sent = false;           // 다시 고르면 새 응답으로 봅니다
+  choiceState.submissionId = null;
+  choiceState.sentReflection = '';
   renderChoiceStep();
   renderFlowProgress();
   document.querySelector(`#choiceStep [data-choice-option="${CSS.escape ? CSS.escape(optionId) : optionId}"]`)?.focus({ preventScroll: true });
@@ -3531,8 +3535,6 @@ function renderReflectStep() {
   if (input && input.value !== choiceState.reflection) input.value = choiceState.reflection;
   const count = document.getElementById('reflectCount');
   if (count && input) count.textContent = String(input.value.length);
-  const consent = document.getElementById('choiceShareConsent');
-  if (consent) consent.disabled = !chosenSummary().some(r => !r.skipped);
 }
 
 /** 소감 칸이 비어 있으면 아래 버튼이 '소감 없이 카드 만들기'가 됩니다 (따로 '건너뛰기' 버튼을 두지 않음). */
@@ -3569,24 +3571,36 @@ function makeQuickCard(skipReflection) {
   cardState.picked = cardState.picked.filter(id => cardState.options.some(o => o.id === id));
   markFlow({ cardMade: true });
   countParticipation();
-  const consent = document.getElementById('choiceShareConsent');
-  const share = !!(consent && consent.checked && !consent.disabled);
   openCardPage();
-  if (share && !choiceState.sent) sendChoices(); else renderChoiceOthers(null);
+  saveQuickAnswers();
 }
 
-async function sendChoices() {
+/**
+ * 카드를 만들 때 고른 관점(객관식)과 한 줄 소감을 이름 없이 저장합니다.
+ * 같은 답·같은 소감으로 카드를 다시 만들면 다시 보내지 않고, 소감을 고쳐 다시 만들면 고친 소감만 새로 저장합니다.
+ * 저장에 실패해도 카드는 그대로 만들어집니다.
+ */
+async function saveQuickAnswers() {
   const eventId = currentEventId;
-  const rows = Choices.rowsForStorage(eventId, choiceState.answers);
-  const res = Store ? await Store.insertChoices(rows) : { ok: false, unavailable: true };
-  if (eventId !== currentEventId) return;
-  choiceState.sent = !!res.ok;
-  const msg = res.ok
-    ? '고른 관점을 익명 통계에 보탰어요. (선택지 이름만 보냈어요)'
-    : res.unavailable
-      ? '지금은 통계 저장을 준비 중이라 보내지 않았어요. 카드는 그대로예요.'
-      : `통계에 보내지 못했어요. 카드는 그대로예요. ${res.error || ''}`;
-  renderChoiceOthers(msg);
+  if (!Store || !Choices) { renderChoiceOthers(null); return; }
+  if (!choiceState.submissionId) choiceState.submissionId = Store.newSubmissionId();
+  const submissionId = choiceState.submissionId;
+  let choiceRes = { ok: true };
+  if (!choiceState.sent) {
+    const rows = Choices.rowsForStorage(eventId, choiceState.answers).map(r => Object.assign(r, { submission_id: submissionId }));
+    choiceRes = await Store.insertChoices(rows);
+    if (eventId !== currentEventId) return;
+    choiceState.sent = !!choiceRes.ok;
+  }
+  const reflection = (choiceState.reflection || '').trim();
+  let reflectRes = { ok: true };
+  if (reflection && reflection !== choiceState.sentReflection) {
+    reflectRes = await Store.insertReflection({ eventKey: eventId, submissionId, content: reflection });
+    if (eventId !== currentEventId) return;
+    if (reflectRes.ok) choiceState.sentReflection = reflection;
+  }
+  const failed = [choiceRes, reflectRes].find(r => !r.ok && !r.unavailable);
+  renderChoiceOthers(failed ? `기록을 저장하지 못했어요. 카드는 그대로예요. ${failed.error || ''}` : null);
 }
 
 /** 카드 화면: 다른 참여자들이 고른 관점 (객관식 집계 · 질문별 응답 5명 미만이면 숨김) */
@@ -3621,7 +3635,7 @@ async function renderChoiceOthers(statusMsg) {
   }).join('');
   box.innerHTML = `${status}
     <h3 class="choice-others__title">다른 참여자들은 어떤 관점을 골랐을까?</h3>
-    <p class="nlp-meta">‘익명 통계에 보태기’에 동의한 참여자의 객관식 선택만 모은 것입니다(공동 표현과 따로 집계). 많이 고른 관점이 옳다는 뜻은 아니에요.</p>
+    <p class="nlp-meta">참여자들이 고른 객관식 선택을 모은 것입니다(공동 표현과 따로 집계). 많이 고른 관점이 옳다는 뜻은 아니에요.</p>
     ${body}`;
 }
 

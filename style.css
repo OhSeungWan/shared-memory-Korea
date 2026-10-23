@@ -3686,10 +3686,6 @@ body { word-break: keep-all; overflow-wrap: break-word; }
 .reflect-recap__list { list-style: none; display: grid; gap: 0.35rem; font-size: var(--fs-md); }
 .reflect-recap__list small { display: block; font-size: var(--fs-2xs); color: var(--ink-mute); }
 .reflect-label { display: block; font-family: var(--font-display); font-weight: 700; font-size: var(--fs-md); color: var(--accent); margin: 0.2rem 0 0.4rem; }
-.reflect-step .reflect-extra { margin-top: 0.4rem; }
-.reflect-extra__label { font-size: var(--fs-sm); font-weight: 700; color: var(--ink-soft); margin: 0 0 0.35rem; }
-.reflect-extra__label small { font-weight: 400; color: var(--ink-mute); }
-.reflect-step .reflect-extra .consent-check--soft { margin: 0; }
 .consent-check--soft { background: var(--bg-card); border: 1px dashed var(--line); border-radius: var(--radius); padding: 0.75rem 0.9rem; }
 .consent-check--soft input:disabled + span { opacity: 0.55; }
 
