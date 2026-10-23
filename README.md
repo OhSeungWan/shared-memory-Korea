@@ -546,6 +546,15 @@ npm test                                            # 기록 형식 확인 (질�
 | `sm_choice_insert_guard` 트리거 | 전체 등록이 1분에 600건 이상이면 멈춤(자동 도배 방지) |
 | `choice_counts(p_event_key)` 함수 | 선택지별 수만 공개. 질문별 응답이 `sm_min_group_size()`(5) 미만이면 그 질문은 돌려주지 않음 |
 
+### 참여자 수에 객관식 참여 포함 — [`supabase/2026-10-count-choice-participants.sql`](supabase/2026-10-count-choice-participants.sql) (**미적용 · 승인 후 SQL Editor에서 실행**)
+
+`participation_summary()`의 `participants`(첫 화면 "현재 N명이 참여")에 기본 체험 객관식 참여를 더합니다. 함수 하나만 바꾸며 반환 형식·권한은 그대로라 사이트 코드 변경은 없습니다.
+
+- 객관식 행에는 참여자 키가 없으므로, 한 번에 보낸 응답 묶음 `(event_key, created_at)`을 참여 1회로 셉니다(사이트는 한 사람의 응답을 INSERT 한 번으로 보냄).
+- '익명 통계에 보태기'에 동의하지 않은 참여자는 서버에 기록이 없어 셀 수 없습니다(수집 범위는 바꾸지 않음).
+- 같은 사람이 객관식과 공동 표현을 모두 했다면 두 번 셀 수 있습니다(두 데이터를 잇지 않는 설계).
+- `completed_participants`·`expressions`는 공동 표현 기준 그대로입니다.
+
 ### RLS와 보안
 
 - 브라우저에는 **publishable(anon) 키만** 있습니다. `service_role` 키·비밀 키를 절대 코드에 넣지 마세요.

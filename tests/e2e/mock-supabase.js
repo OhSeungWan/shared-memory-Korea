@@ -27,8 +27,10 @@
     } else if (window.__mockDb.failInsert && table === 'shared_expressions') {
       result = { data: null, error: { code: 'NETWORK', message: 'Failed to fetch' } };
     } else {
+      // 서버처럼 한 번의 INSERT로 들어간 행은 같은 created_at(트랜잭션 시각)을 가집니다.
+      const batchAt = new Date().toISOString() + '#' + Math.random().toString(36).slice(2);   // 묶음 구분용
       const saved = rows.map(r => Object.assign({}, r, table === 'shared_expressions'
-        ? { id: db.nextId++, created_at: new Date().toISOString() } : {}));
+        ? { id: db.nextId++, created_at: new Date().toISOString() } : table === 'exploration_choices' ? { created_at: batchAt } : {}));
       db[table] = (db[table] || []).concat(saved);
       save(db);
       result = { data: saved.map(r => ({ id: r.id })), error: null };
@@ -70,7 +72,9 @@
     }
     if (name === 'participation_summary') {
       const keys = new Set(db.expression_participants.map(p => p.participant_key));
-      return Promise.resolve({ data: [{ participants: keys.size, completed_participants: keys.size, expressions: db.shared_expressions.length }], error: null });
+      // 2026-10-count-choice-participants.sql: 객관식 응답 묶음(event_key, created_at)도 참여자 수에 더함
+      const choiceSubmissions = new Set((db.exploration_choices || []).map(c => c.event_key + '|' + c.created_at)).size;
+      return Promise.resolve({ data: [{ participants: keys.size + choiceSubmissions, completed_participants: keys.size, expressions: db.shared_expressions.length }], error: null });
     }
     if (name === 'choice_counts') {
       if (window.__mockDb.noChoiceTable) return Promise.resolve({ data: null, error: { code: 'PGRST202', message: 'Could not find the function' } });
